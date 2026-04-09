@@ -1,55 +1,66 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get("window")
 
 export const styles = StyleSheet.create({
     background: {
-        height: "100%"
+        flex: 1,
     },
     body: {
-        display: "flex",
+        flex: 1,
         justifyContent: "space-between",
-        width: "100%",
-        height: "100%",
-        padding: 5
+        padding: 5,
     },
     sections_cont: {
-        display: "flex",
-        flexDirection: "row",
-        justifyContent: "space-between"
-    },
-    states_cont: {
-        display: "flex",
         flexDirection: "row",
         justifyContent: "space-between",
-        width: 150,
-        margin: 5
+        alignItems: "center",
+        marginTop: 8,
+        paddingHorizontal: 5,
     },
-    main_cont:{
-        display: "flex",
+    states_cont: {
+        flexDirection: "row",
+        gap: 8,
     },
-    pet_cont: {
-        margin: "auto",
-        width: "min-content"
+    points_btn: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#FF6500",
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 9,
+        gap: 6,
+    },
+    points_text: {
+        color: "#fff",
+        fontWeight: "bold",
+        fontSize: 14,
+    },
+    main_cont: {
+        flex: 1,
+        justifyContent: "flex-end",
+        alignItems: "center",
+        paddingBottom: height * 0.04,
+    },
+    img_pet: {
+        width: width * 0.48,
+        height: width * 0.48 * (208 / 187),
     },
     actions_cont: {
-        display: "flex",
         flexDirection: "row",
         justifyContent: "space-evenly",
-        margin: 5
-    },
-    points_cont: {
+        paddingVertical: height * 0.018,
     },
     btn_cont: {
         borderRadius: 100,
         backgroundColor: "#FF6500",
         padding: 9,
-        width: 45,
-        height: 45
+        width: width * 0.12,
+        height: width * 0.12,
+        justifyContent: "center",
+        alignItems: "center",
     },
     general_button: {
-        color: "#FFFF",
+        color: "#fff",
     },
-    img_pet: {
-        width: 187,
-        height: 208
-    }
 });
