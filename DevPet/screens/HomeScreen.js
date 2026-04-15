@@ -66,16 +66,22 @@ export default function HomeScreen({ navigation }) {
                     )}
                 </View>
                 <View style={styles.actions_cont}>
-                    <TouchableOpacity ç
+                    <TouchableOpacity
                         style={styles.btn_cont}
                         onPress={() => setWaterSheetVisible(true)}
                     >
                         <Droplet size={27} strokeWidth={1} style={styles.general_button} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.btn_cont}>
+                    <TouchableOpacity 
+                        style={styles.btn_cont}
+                        onPress={() => setSleepSheetVisible(true)}
+                    >
                         <BatteryMedium size={27} strokeWidth={1} style={styles.general_button} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.btn_cont}>
+                    <TouchableOpacity 
+                        style={styles.btn_cont}
+                        onPress={() => setRestSheetVisible(true)}
+                    >
                         <Heart size={27} strokeWidth={1} style={styles.general_button} />
                     </TouchableOpacity>
                 </View>
@@ -85,21 +91,21 @@ export default function HomeScreen({ navigation }) {
                 onClose={() => setSheetVisible(false)}
                 animation="slideDown"
             >
-                <Text>Aqui se pone los respectivos graficos</Text>
+                <Text style={styles.text_sheet}>Aqui se pone los respectivos graficos</Text>
             </Sheet>
             <Sheet
                 visible={shopVisible}
                 onClose={() => setShopVisible(false)}
                 animation="slideDown"
             >
-                <Text>Aqui se pone la tienda</Text>
+                <Text style={styles.text_sheet}>Aqui se pone la tienda</Text>
             </Sheet>
             <Sheet
                 visible={taskVisible}
                 onClose={() => setTaskVisible(false)}
                 animation="slideDown"
             >
-                <Text>Aqui se ponen las respectivas tareas</Text>
+                <Text style={styles.text_sheet}>Aqui se ponen las respectivas tareas</Text>
             </Sheet>
             <Sheet
                 visible={waterSheetVisible}
@@ -107,7 +113,23 @@ export default function HomeScreen({ navigation }) {
                 sheetTop={80}
                 animation="slideUp"
             >
-                <Text>Aqui se registra la hidratación</Text>
+                <Text style={styles.text_sheet}>Aqui se registra la hidratación</Text>
+            </Sheet>
+            <Sheet
+                visible={sleepSheetVisible}
+                onClose={() => setSleepSheetVisible(false)}
+                sheetTop={80}
+                animation="slideUp"
+            >
+                <Text style={styles.text_sheet}>Aqui se registran las horas dormidas</Text>
+            </Sheet>
+            <Sheet
+                visible={restSheetVisible}
+                onClose={() => setRestSheetVisible(false)}
+                sheetTop={80}
+                animation="slideUp"
+            >
+                <Text style={styles.text_sheet}>Aqui se registran las pausas activas</Text>
             </Sheet>
         </ImageBackground>
     );

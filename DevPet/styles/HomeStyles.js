@@ -63,4 +63,7 @@ export const styles = StyleSheet.create({
     general_button: {
         color: "#fff",
     },
+    text_sheet: {
+        color: "#FFF"
+    }
 });
