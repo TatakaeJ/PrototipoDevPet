@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ML Stretch Detection</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@latest"></script>
+</head>
+
+<body>
+  <h2>Detectando postura...</h2>
+  <video id="webcam" autoplay playsinline width="300" height="300"></video>
+
+  <script>
+    const URL = "https://teachablemachine.withgoogle.com/models/UTWlA7v3H/"; // archivos locales
+
+    let model, webcam, ctx;
+
+    async function init() {
+      const modelURL = URL + "model.json";
+      const metadataURL = URL + "metadata.json";
+
+      model = await tmPose.load(modelURL, metadataURL);
+
+      const size = 300;
+      webcam = new tmPose.Webcam(size, size, true);
+      await webcam.setup();
+      await webcam.play();
+
+      window.requestAnimationFrame(loop);
+
+      document.getElementById("webcam").srcObject = webcam.webcam;
+    }
+
+    async function loop() {
+      webcam.update();
+      await predict();
+      window.requestAnimationFrame(loop);
+    }
+
+    async function predict() {
+      const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+      const prediction = await model.predict(posenetOutput);
+
+      let maxProb = 0;
+      let bestClass = "";
+
+      for (let i = 0; i < prediction.length; i++) {
+        if (prediction[i].probability > maxProb) {
+          maxProb = prediction[i].probability;
+          bestClass = prediction[i].className;
+        }
+      }
+
+      if (maxProb > 0.8) { //REACT Native ML (para mirar)
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(bestClass);
+        }
+      }
+
+      console.log(bestClass, maxProb);
+    }
+
+    init();
+  </script>
+</body>
+</html>

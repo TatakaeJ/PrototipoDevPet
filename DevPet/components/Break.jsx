@@ -42,7 +42,7 @@ const Break = ( { addPoints, onSaved  } ) => {
   };
 
   const handleFinish = async () => {
-    Vibration.vibrate([500, 500, 500]); // Notificar al usuario goty
+    Vibration.vibrate([500, 500, 500]); // Notificar al usuario
     try {
       await saveBreak({
         user_id: 'demo-user',

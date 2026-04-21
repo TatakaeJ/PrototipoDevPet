@@ -3,12 +3,16 @@ import { ImageBackground, View, Text, TouchableOpacity, Image, StyleSheet, Dimen
 import { SafeAreaView } from "react-native-safe-area-context";
 import { styles } from "../styles/HomeStyles";
 import { BrainCog, ShoppingCart, ClipboardList, Gem, Droplet, BatteryMedium, Heart, Star, Target, } from "lucide-react-native";
+import { Modal } from 'react-native'
 
 // Componentes personalizados (comprobado sin bug por el momento xd)
 import PetParticles from "../components/PetParticles";
 import Sheet from "../components/Sheet";
 import Break from "../components/Break";
 import Habits from "../components/Habits";
+import Water from '../components/Water';
+import Sleep from '../components/Sleep';
+import MLView from '../components/MLView'
 import { getTodayHabits, getTodayBreaks } from "../lib/supabaseClient";
 
 const { width } = Dimensions.get("window");
@@ -18,6 +22,10 @@ const OptimizedParticles = React.memo(PetParticles);
 export default function HomeScreen({ navigation }) {
   const [petArea, setPetArea] = useState({ width: 0, height: 0 });
   const [bounce, setBounce] = useState(false);
+  const [waterVisible, setWaterVisible] = useState(false);
+  const [sleepVisible, setSleepVisible] = useState(false);
+  const [breakVisible, setBreakVisible] = useState(false)
+  const [mlVisible, setMLVisible] = useState(false)
 
   // Estados de visibilidad para los Sheets (lo organicé mejor)
   const [sheets, setSheets] = useState({
@@ -108,6 +116,9 @@ export default function HomeScreen({ navigation }) {
             >
               <ClipboardList size={20} color="white" />
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => setMLVisible(true)}>
+              <Text>🧠 IA</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Contador de diamantes pa' el free */}
@@ -134,7 +145,7 @@ export default function HomeScreen({ navigation }) {
 
           <View style={localStyles.summaryPill}>
             <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
-              💧 {summary.water} | 😴 {summary.sleep}h | 🧘 {summary.breaks}
+              💧Agua: {summary.water} | 😴 Sueño: {summary.sleep}h | 🧘 Breaks: {summary.breaks}
             </Text>
           </View>
 
@@ -179,16 +190,18 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.actions_cont}>
           <TouchableOpacity
             style={localStyles.actionBtn}
-            onPress={() => toggleSheet("water", true)}
+            onPress={() => setWaterVisible(true)} // Cambiado aquí
           >
             <Droplet size={24} color="white" />
           </TouchableOpacity>
+
           <TouchableOpacity
             style={localStyles.actionBtn}
-            onPress={() => toggleSheet("sleep", true)}
+            onPress={() => setSleepVisible(true)} // Cambiado aquí
           >
             <BatteryMedium size={24} color="white" />
           </TouchableOpacity>
+
           <TouchableOpacity
             style={localStyles.actionBtn}
             onPress={() => toggleSheet("rest", true)}
@@ -196,9 +209,10 @@ export default function HomeScreen({ navigation }) {
             <Heart size={24} color="white" />
           </TouchableOpacity>
         </View>
+
       </SafeAreaView>
 
-      {/* --- sección de modales organizada, antes estaba fea --- */}
+      {/* --- sección de modales organizada--- */}
 
       <Sheet
         visible={sheets.states}
@@ -229,24 +243,14 @@ export default function HomeScreen({ navigation }) {
       </Sheet>
 
       {/* Registro de Hidratación */}
-      <Sheet
-        visible={sheets.water}
-        onClose={() => toggleSheet("water", false)}
-        sheetTop={80}
-        animation="slideUp"
-      >
-        <Habits type="water" addPoints={setPoints} onSaved={loadSummary} />
-      </Sheet>
+      <Sheet visible={waterVisible} onClose={() => setWaterVisible(false)} sheetTop={80} animation="slideUp">
+  <Water addPoints={setPoints} onSaved={() => { loadSummary(); setWaterVisible(false); }} />
+</Sheet>
 
       {/* Registro de Sueño */}
-      <Sheet
-        visible={sheets.sleep}
-        onClose={() => toggleSheet("sleep", false)}
-        sheetTop={80}
-        animation="slideUp"
-      >
-        <Habits type="sleep" addPoints={setPoints} onSaved={loadSummary} />
-      </Sheet>
+      <Sheet visible={sleepVisible} onClose={() => setSleepVisible(false)} sheetTop={80} animation="slideUp">
+  <Sleep addPoints={setPoints} onSaved={() => { loadSummary(); setSleepVisible(false); }} />
+</Sheet>
 
       {/* Pausas Activas */}
       <Sheet
@@ -257,6 +261,28 @@ export default function HomeScreen({ navigation }) {
       >
         <Break addPoints={setPoints} onSaved={loadSummary} />
       </Sheet>
+
+      <Modal visible={mlVisible} animationType="slide">
+  <View style={{ flex: 1 }}>
+
+    <TouchableOpacity
+      onPress={() => setMLVisible(false)}
+      style={{ padding: 15, backgroundColor: '#111' }}
+    >
+      <Text style={{ color: 'white', textAlign: 'center' }}>
+        Cerrar
+      </Text>
+    </TouchableOpacity>
+
+    <MLView 
+      onDetected={() => {
+        handleFinish()
+        setMLVisible(false)
+      }}
+    />
+
+  </View>
+</Modal>
     </ImageBackground>
   );
 }

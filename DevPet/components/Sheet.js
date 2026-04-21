@@ -47,7 +47,7 @@ export default function Sheet({
         Animated.spring(translateY, {
             toValue: 0,
             bounciness: 4,
-            useNativeDriver: true, // cambio NSX0101 arreglé useEffect
+            useNativeDriver: true, // cambio arreglé useEffect
         }).start();
     } else {
         Animated.timing(translateY, {
@@ -70,7 +70,7 @@ export default function Sheet({
             <TouchableOpacity
                 style={styles.overlay}
                 activeOpacity={1}
-                onPress={onClose} // Posible cambio NSX0102 null antes
+                onPress={onClose} // Posible cambio null antes
             />
             <Animated.View
                 style={[

@@ -7,21 +7,36 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 // Guardar hábitos
 export const saveHabits = async (data) => {
-  try {
+  const today = new Date().toISOString().split('T')[0]
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('habits')
+    .select('*')
+    .eq('user_id', 'demo-user')
+    .eq('date', today)
+    .maybeSingle()
+
+  if (fetchError) throw fetchError
+
+  if (existing) {
     const { error } = await supabase
       .from('habits')
-      .insert([data])
+      .update(data)
+      .eq('user_id', 'demo-user')
+      .eq('date', today)
 
-/*     if (error) {
-      if (error.code === '23505') {
-        throw new Error('chiquitín ya registraste hoy')
-      }
-      throw error
-    } */
+    if (error) throw error
 
-    return true
-  } catch (err) {
-    throw err
+  } else {
+    const { error } = await supabase
+      .from('habits')
+      .insert([{
+        user_id: 'demo-user',
+        date: today,
+        ...data
+      }])
+
+    if (error) throw error
   }
 }
 
