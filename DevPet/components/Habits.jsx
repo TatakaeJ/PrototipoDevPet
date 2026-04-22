@@ -2,196 +2,121 @@ import React, { useState } from 'react';
 import { 
   View, 
   Text, 
-  Button, 
-  TextInput, 
+  TouchableOpacity, 
   StyleSheet, 
-  KeyboardAvoidingView, 
-  Platform,
-  TouchableOpacity 
+  TextInput, 
+  Alert, 
+  ScrollView 
 } from 'react-native';
 import { saveHabits } from "../lib/supabaseClient";
 
 const Habits = ({ addPoints, onSaved }) => {
+  const [view, setView] = useState('menu'); // 'menu', 'water', 'sleep'
   const [water, setWater] = useState(0);
   const [sleepTime, setSleepTime] = useState('');
   const [wakeTime, setWakeTime] = useState('');
-  const [message, setMessage] = useState('');
 
-  // calcular horas de sueño. me pashe
   const calculateSleepHours = () => {
     if (!sleepTime || !wakeTime) return 0;
-
-    const [hSleep, mSleep] = sleepTime.split(':').map(Number);
-    const [hWake, mWake] = wakeTime.split(':').map(Number);
-
-    const sleepDate = new Date(2000, 0, 1, hSleep, mSleep);
-    const wakeDate = new Date(2000, 0, 1, hWake, mWake);
-
-    let diff = (wakeDate - sleepDate) / (1000 * 60 * 60);
-    if (diff < 0) diff += 24; // Manejo de cambio de día (lo ví en un tutorial)
-
-    return diff.toFixed(1);
+    const [hS, mS] = sleepTime.split(':').map(Number);
+    const [hW, mW] = wakeTime.split(':').map(Number);
+    let diff = (new Date(0,0,0,hW,mW) - new Date(0,0,0,hS,mS)) / 1000 / 60 / 60;
+    return diff < 0 ? (diff + 24).toFixed(1) : diff.toFixed(1);
   };
 
-  // Guardar en Supabase
-  const handleSave = async ({ addPoints }) => {
+  const handleSave = async () => {
     try {
       const data = {
-        user_id: 'demo-user', // vincular ID real de Supabase Auth (para mi futuro yo)
+        user_id: 'demo-user',
         date: new Date().toISOString().split('T')[0],
         water: water,
         sleep_hours: Number(calculateSleepHours())
       };
 
       await saveHabits(data);
-
-      addPoints(prev => prev + 10)
-
-      setMessage('Guardado correctamente');
-      onSaved()
+      if (addPoints) addPoints(prev => prev + 10);
+      if (onSaved) onSaved();
+      
+      Alert.alert("¡Genial!", "Tus hábitos han sido actualizados.");
+      setView('menu'); // Regresa al menú después de guardar
     } catch (err) {
-      setMessage(`Error: ${err.message}`);
+      Alert.alert("Error", err.message);
     }
-    
   };
 
-  return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      <View style={styles.card}>
-        <Text style={styles.title}>Registro de Hábitos</Text>
+  // --- VISTA: MENÚ PRINCIPAL ---
+  if (view === 'menu') {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Panel de Hábitos</Text>
+        <Text style={styles.subtitle}>¿Qué quieres registrar hoy?</Text>
+        <View style={styles.menuGrid}>
+          <TouchableOpacity style={[styles.card, styles.waterCard]} onPress={() => setView('water')}>
+            <View style={styles.iconCircle}><Text style={styles.emoji}>💧</Text></View>
+            <Text style={styles.cardText}>Agua</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.card, styles.sleepCard]} onPress={() => setView('sleep')}>
+            <View style={styles.iconCircle}><Text style={styles.emoji}>😴</Text></View>
+            <Text style={styles.cardText}>Sueño</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
-        {/* Sección Agua */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Vasos de agua: {water}</Text>
+  // --- VISTA: FORMULARIO ---
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <TouchableOpacity onPress={() => setView('menu')} style={styles.backBtn}>
+        <Text style={{color: '#64748b'}}>← Volver al menú</Text>
+      </TouchableOpacity>
+
+      {view === 'water' ? (
+        <View style={styles.formBlock}>
+          <Text style={styles.title}>💧 Hidratación</Text>
+          <Text style={styles.countText}>{water} vasos</Text>
           <View style={styles.row}>
-            <TouchableOpacity 
-              style={[styles.btnCounter, { backgroundColor: '#ef4444' }]} 
-              onPress={() => setWater(Math.max(0, water - 1))}
-            >
-              <Text style={styles.btnText}>-</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.btnCounter, { backgroundColor: '#3b82f6' }]} 
-              onPress={() => setWater(water + 1)}
-            >
-              <Text style={styles.btnText}>+</Text>
-            </TouchableOpacity>
+            <TouchableOpacity style={styles.btnRound} onPress={() => setWater(Math.max(0, water - 1))}><Text style={styles.btnText}>-</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.btnRound} onPress={() => setWater(water + 1)}><Text style={styles.btnText}>+</Text></TouchableOpacity>
           </View>
         </View>
-
-        {/* Sección Sueño */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Horas de Sueño</Text>
-          <TextInput
-            placeholder="Dormir (Ej: 22:00)"
-            value={sleepTime}
-            onChangeText={setSleepTime}
-            keyboardType="numbers-and-punctuation"
-            style={styles.input}
-          />
-          <TextInput
-            placeholder="Despertar (Ej: 06:00)"
-            value={wakeTime}
-            onChangeText={setWakeTime}
-            keyboardType="numbers-and-punctuation"
-            style={styles.input}
-          />
-          <Text style={styles.resultText}>Total: {calculateSleepHours()} hrs</Text> {/* Posible cambio */}
+      ) : (
+        <View style={styles.formBlock}>
+          <Text style={styles.title}>😴 Sueño</Text>
+          <TextInput placeholder="Dormir (22:00)" style={styles.input} onChangeText={setSleepTime} value={sleepTime} />
+          <TextInput placeholder="Despertar (06:00)" style={styles.input} onChangeText={setWakeTime} value={wakeTime} />
+          <Text style={styles.resultText}>Total: {calculateSleepHours()} hrs</Text>
         </View>
+      )}
 
-        {/* Botón Guardar */}
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Guardar en Supabase</Text>
-        </TouchableOpacity>
-
-        {message ? <Text style={styles.feedback}>{message}</Text> : null}
-      </View>
-    </KeyboardAvoidingView>
+      <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+        <Text style={styles.saveBtnText}>Guardar Todo</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#f3f4f6'
-  },
-  card: {
-    backgroundColor: 'white',
-    padding: 25,
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
-    color: '#1f2937'
-  },
-  section: {
-    marginBottom: 20
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: '#374151'
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 15
-  },
-  btnCounter: {
-    paddingVertical: 10,
-    paddingHorizontal: 25,
-    borderRadius: 10,
-  },
-  btnText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold'
-  },
-  input: {
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    padding: 12,
-    marginVertical: 5,
-    borderRadius: 10,
-    fontSize: 16
-  },
-  resultText: {
-    marginTop: 5,
-    color: '#6b7280',
-    fontStyle: 'italic'
-  },
-  saveButton: {
-    backgroundColor: '#10b981',
-    padding: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 10
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold'
-  },
-  feedback: {
-    marginTop: 15,
-    textAlign: 'center',
-    fontWeight: '500'
-  }
+  container: { padding: 20, alignItems: 'center', backgroundColor: 'white' },
+  title: { fontSize: 22, fontWeight: 'bold', color: '#1e293b' },
+  subtitle: { fontSize: 14, color: '#64748b', marginBottom: 20 },
+  menuGrid: { flexDirection: 'row', gap: 15 },
+  card: { flex: 1, padding: 20, borderRadius: 20, alignItems: 'center', elevation: 3 },
+  waterCard: { backgroundColor: '#eff6ff' },
+  sleepCard: { backgroundColor: '#faf5ff' },
+  iconCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  emoji: { fontSize: 24 },
+  cardText: { fontWeight: 'bold', color: '#334155' },
+  formBlock: { width: '100%', alignItems: 'center', marginVertical: 20 },
+  countText: { fontSize: 40, fontWeight: 'bold', color: '#3b82f6', marginVertical: 10 },
+  row: { flexDirection: 'row', gap: 20 },
+  btnRound: { backgroundColor: '#3b82f6', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
+  btnText: { color: 'white', fontSize: 24, fontWeight: 'bold' },
+  input: { backgroundColor: '#f1f5f9', width: '100%', padding: 15, borderRadius: 10, marginBottom: 10 },
+  resultText: { fontStyle: 'italic', color: '#64748b' },
+  saveBtn: { backgroundColor: '#10b981', width: '100%', padding: 15, borderRadius: 15, alignItems: 'center', marginTop: 10 },
+  saveBtnText: { color: 'white', fontWeight: 'bold' },
+  backBtn: { alignSelf: 'flex-start', marginBottom: 10 }
 });
 
 export default Habits;
