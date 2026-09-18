@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Dimensions, ScrollView } from 'react-native';
-import { saveWaterLog } from "../../lib/supabaseClient";
+import { saveWaterLog } from "../../src/services/habits.service";
 
 const { height } = Dimensions.get('window');
 

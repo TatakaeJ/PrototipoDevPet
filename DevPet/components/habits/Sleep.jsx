@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { saveSleepLog, getDayHabits } from "../../lib/supabaseClient";
+import { saveSleepLog, getDayHabits } from "../../src/services/habits.service";
 import { BrainCog } from "lucide-react-native";
 
 const Sleep = ({ userId, addPoints, onSaved }) => {

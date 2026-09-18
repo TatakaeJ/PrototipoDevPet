@@ -10,9 +10,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Linking,
-  Image,
-  Animated,
   StyleSheet,
   Dimensions,
 } from "react-native";
@@ -27,59 +24,22 @@ import {
   BatteryMedium,
   Heart,
   Star,
-  Target,
 } from "lucide-react-native";
 import { Modal, Alert } from "react-native";
 import HabitChart from "../components/charts/HabitChart";
 import Pet from "../components/pet/Pet";
 import Sheet from "../components/Sheet";
 import Break from "../components/habits/Break";
-import Habits from "../components/habits/Habits";
 import Water from "../components/habits/Water";
 import Sleep from "../components/habits/Sleep";
-import MLView from "../components/MLView";
 import MLCamera from "../components/MLCamera";
 import DailyTasks from "../components/DailyTasks";
 import {
-  supabase,
   saveBreak,
-  getTodayHabits,
-  getTodayBreaks,
-  getDayHabits,
   getUserInfo,
-} from "../lib/supabaseClient";
+} from "../src/services/habits.service";
 import { useAuth } from "../context/AuthContext";
-
-const { width } = Dimensions.get("window");
-
-// A esta funcion se le pasara otros datos que no sean el resumen (summary ya no existe es innesesario)
-const getRecommendation = (summary) => {
-  if (summary.sleep < 5) {
-    return {
-      text: "Oye... necesitas descansar 😴",
-      mood: "sleep",
-    };
-  }
-
-  if (summary.water < 3) {
-    return {
-      text: "Toma más agua 💧",
-      mood: "water",
-    };
-  }
-
-  if (summary.breaks < 1) {
-    return {
-      text: "Haz una pausa 🧘",
-      mood: "break",
-    };
-  }
-
-  return {
-    text: "Todo en orden, sigue así 🚀",
-    mood: "happy",
-  };
-};
+import { getRecommendation } from "../src/utils/recommendations";
 
 export default function HomeScreen({ navigation }) {
   const { userId } = useAuth();
@@ -279,8 +239,6 @@ export default function HomeScreen({ navigation }) {
           <Pet
             ref={petRef}
             userId={userId}
-            points={points}
-            onPointsChange={(newPoints) => setPoints(newPoints)}
           />
         </View>
 
