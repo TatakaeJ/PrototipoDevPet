@@ -1,118 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
-import CryptoJS from 'crypto-js'
-
-const SUPABASE_URL = 'https://shjdaneajcmwbjszdibx.supabase.co'
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNoamRhbmVhamNtd2Jqc3pkaWJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTQ3MjcsImV4cCI6MjA5MTg3MDcyN30.TdCQMZmNrPyQPyjQqs5AQofPRHffQQk-Qsmvk30XXNk'
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
-
-// ── FUNCIONES DE AUTENTICACIÓN ──
-
-// Verificar si usuario o email ya existe
-export const checkUserExists = async (user_name, email) => {
-    try {
-        const { data, error } = await supabase
-            .from('users')
-            .select('user_id')
-            .or(`user_name.eq.${user_name},email.eq.${email}`)
-            .limit(1)
-
-        if (error) throw error
-        return data && data.length > 0
-    } catch (error) {
-        console.error('Error verificando usuario:', error)
-        throw error
-    }
-}
-
-// Registrar nuevo usuario
-export const registerUser = async (user_name, email, password) => {
-    try {
-        // Verificar si usuario ya existe
-        const exists = await checkUserExists(user_name, email)
-        if (exists) {
-            throw new Error('El usuario o email ya está registrado')
-        }
-
-        // Encriptar password usando SHA256
-        const password_hash = CryptoJS.SHA256(password).toString()
-
-        // Insertar usuario en base de datos
-        const { data, error } = await supabase
-            .from('users')
-            .insert([{
-                user_name,
-                email,
-                password_hash,
-                total_points: 0
-            }])
-            .select('user_id')
-            .single()
-
-        if (error) throw error
-
-        console.log('Usuario registrado exitosamente:', data.user_id)
-        return { user_id: data.user_id }
-    } catch (error) {
-        console.error('Error registrando usuario:', error)
-        throw error
-    }
-}
-
-// Iniciar sesión
-export const loginUser = async (user_name, password) => {
-    try {
-        console.log('Intentando login para user_name:', user_name);
-        
-        // Buscar usuario por user_name
-        const { data, error } = await supabase
-            .from('users')
-            .select('user_id, password_hash')
-            .eq('user_name', user_name)
-            .single()
-
-        console.log('Resultado de búsqueda:', { data, error });
-
-        if (error) {
-            console.error('Error en consulta:', error);
-            if (error.code === 'PGRST116') {
-                throw new Error('Usuario no encontrado')
-            }
-            throw error
-        }
-
-        if (!data) {
-            throw new Error('Usuario no encontrado')
-        }
-
-        // Comparar password usando SHA256
-        const password_hash = CryptoJS.SHA256(password).toString()
-        console.log('Hash de password ingresado:', password_hash);
-        console.log('Hash en DB:', data.password_hash);
-        
-        const isMatch = password_hash === data.password_hash
-        if (!isMatch) {
-            throw new Error('Contraseña incorrecta')
-        }
-
-        console.log('Login exitoso:', data.user_id)
-        return { user_id: data.user_id }
-    } catch (error) {
-        console.error('Error en login:', error)
-        throw error
-    }
-}
-
-const getLocalDate = () => {
-    return new Date().toLocaleDateString('en-CA');
-}
-
-const getLocalTime = () => {
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-}
+import { supabase } from './supabase.config';
+import { getLocalDate, getLocalTime } from '../utils/time';
 
 export const saveWaterLog = async (waterAmount, userId) => {
     try {
@@ -174,7 +61,7 @@ export const saveActiveBreakLog = async (userId) => {
     }
 }
 
-// Guardar sesión de pausa activa en active_break_sessions
+// Guardar sesión de pausa activa en active_break_sessions (pendiente por uso)
 export const saveBreakSession = async (sessionData, userId) => {
   try {
     const { error } = await supabase

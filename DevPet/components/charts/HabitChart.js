@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { getDayHabits, getWeekHabits, getMonthHabits } from '../../lib/supabaseClient';
+import { getDayHabits, getWeekHabits, getMonthHabits } from '../../src/services/habits.service';
 import DailyHabitCharts from './DailyHabitCharts';
 import WeeklyHabitCharts from './WeeklyHabitCharts';
 import MonthlyHabitCharts from './MonthlyHabitCharts';

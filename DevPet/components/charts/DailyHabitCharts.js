@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
-import { getHealthyHabits } from '../../lib/supabaseClient';
+import { getHealthyHabits } from '../../src/services/habits.service';
 
 const { width } = Dimensions.get('window');
 
