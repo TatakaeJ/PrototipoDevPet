@@ -1,24 +1,23 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Image, Animated, StyleSheet, Dimensions } from 'react-native';
-
-const { width } = Dimensions.get('window');
+import { View, Image, Animated } from 'react-native';
+import { styles } from '../../styles/petStyles/PetPerticles.styles';
 
 // Define los emojis por estado
 const EMOJI_SETS = {
   happy: [
-    require('../../assets/emojis/happy.png'),
+    require('../../assets/petStates/happy.png'),
   ],
   sad: [
-    require('../../assets/emojis/sad.png'),
+    require('../../assets/petStates/sad.png'),
   ],
   sleepy: [
-    require('../../assets/emojis/sleepy.png'),
+    require('../../assets/petStates/sleepy.png'),
   ],
   neutral: [
-    require('../../assets/emojis/neutral.png'),
+    require('../../assets/petStates/neutral.png'),
   ],
   thirsty: [
-    require('../../assets/emojis/thirsty.png'),
+    require('../../assets/petStates/thirsty.png'),
   ],
 };
 
@@ -137,20 +136,4 @@ function Particle({ emoji, petAreaWidth, petAreaHeight, delay }) {
         ))}
         </View>
     );
-    }
-
-    const styles = StyleSheet.create({
-    container: {
-        position: 'absolute',
-        bottom: 0,
-        alignSelf: "center",
-    },
-    particle: {
-        position: 'absolute',
-        width: 40,
-        height: 40,
-        resizeMode: 'contain',
-        left: "50%",
-        bottom: 0,
-    },
-});
+}

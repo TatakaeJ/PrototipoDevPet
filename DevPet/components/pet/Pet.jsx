@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
-import { View, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Image } from 'react-native';
+import { styles } from '../../styles/petStyles/Pet.styles'
 import PetParticles from './PetParticles';
 import { usePetState } from '../../src/hooks/usePetState';
 
 const OptimizedParticles = React.memo(PetParticles);
-const { width } = Dimensions.get('window');
 
 const Pet = forwardRef(({ userId }, ref) => {
     // Llamamos a nuestro Hook y extraemos los estados finales
@@ -32,7 +32,7 @@ const Pet = forwardRef(({ userId }, ref) => {
         <>
             <View style={styles.petBox}>
                 <Image
-                    source={require('../../assets/DevPet_neutral.png')}
+                    source={require('../../assets/petStates/DevPet_neutral.png')}
                     style={styles.petImage}
                     onLayout={handlePetLayout}
                 />
@@ -50,18 +50,5 @@ const Pet = forwardRef(({ userId }, ref) => {
 });
 
 Pet.displayName = 'Pet';
-
-const styles = StyleSheet.create({
-    petBox: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginVertical: 20,
-    },
-    petImage: {
-        width:       width * 0.48,
-        height:      width * 0.48 * (208 / 187),
-        resizeMode: 'contain',
-    },
-});
 
 export default Pet;

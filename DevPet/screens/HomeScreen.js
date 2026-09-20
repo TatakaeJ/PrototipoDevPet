@@ -10,9 +10,8 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  Dimensions,
 } from "react-native";
+import { localStyles } from "../styles/screensStyles/HomeScreen.styles";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Componentes personalizados
@@ -32,8 +31,8 @@ import Sheet from "../components/Sheet";
 import Break from "../components/habits/Break";
 import Water from "../components/habits/Water";
 import Sleep from "../components/habits/Sleep";
-import MLCamera from "../components/MLCamera";
-import DailyTasks from "../components/DailyTasks";
+import MLCamera from "../components/ml/MLCamera";
+import DailyTasks from "../components/tasks/DailyTasks";
 import {
   saveBreak,
   getUserInfo,
@@ -169,7 +168,7 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <ImageBackground
-      source={require("../assets/RoomBedBackground.png")}
+      source={require("../assets/petModel/RoomBedBackground.png")}
       style={localStyles.background}
       resizeMode="cover"
     >
@@ -437,148 +436,3 @@ const ActionButton = ({ icon, onPress }) => (
     {icon}
   </TouchableOpacity>
 );
-
-const localStyles = StyleSheet.create({
-  background: {
-    flex: 1,
-  },
-  body: {
-    flex: 1,
-    justifyContent: "space-between",
-    padding: 5,
-  },
-  topHeader: {
-    flexDirection: "row",
-    paddingHorizontal: 15,
-    justifyContent: "space-between",
-    alignItems: "center",
-    height: 40,
-  },
-  petContainer: {
-    flex: 1,
-    justifyContent: "flex-end",
-    alignItems: "center",
-    paddingBottom: Dimensions.get("window").height * 0.02,
-  },
-  row: { flexDirection: "row", gap: 8 },
-  miniBtn: { backgroundColor: "rgba(0,0,0,0.3)", padding: 6, borderRadius: 10 },
-  pointsContainer: {
-    backgroundColor: "rgba(0,0,0,0.5)",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 15,
-    gap: 4,
-  },
-  pointsText: { color: "white", fontWeight: "bold", fontSize: 14 },
-  levelSection: { paddingHorizontal: 25, marginTop: 5 },
-  levelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-    gap: 4,
-  },
-  levelLabel: { color: "white", fontWeight: "bold", fontSize: 11 },
-  expText: { color: "rgba(255,255,255,0.6)", fontSize: 9, marginLeft: "auto" },
-  expTrack: {
-    height: 4,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  expFill: { height: "100%", backgroundColor: "#fbbf24" },
-  actions_cont: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    paddingVertical: Dimensions.get("window").height * 0.018,
-  },
-  petBox: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginVertical: 20,
-  },
-  moodEmoji: { position: "absolute", top: -40, zIndex: 10 },
-  missionCard: {
-    backgroundColor: "rgba(255,255,255,0.9)",
-    flexDirection: "row",
-    padding: 8,
-    borderRadius: 12,
-    alignItems: "center",
-    gap: 6,
-    marginTop: 10,
-  },
-  missionText: { fontSize: 11, fontWeight: "bold", color: "#1e293b" },
-  actionBtn: {
-    borderRadius: 100,
-    backgroundColor: "#FF6500",
-    padding: 9,
-    width: Dimensions.get("window").width * 0.12,
-    height: Dimensions.get("window").width * 0.12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  closeBtnMinimal: {
-    padding: 20,
-    alignItems: "center",
-    backgroundColor: "#F1F5F9",
-  },
-  floatingCloseBtn: {
-    position: "absolute",
-    bottom: 40,
-    alignSelf: "center",
-    backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: "white",
-  },
-  bubbleButton: {
-    position: "absolute",
-    top: 20,
-    right: 20,
-    backgroundColor: "#22C55E",
-    padding: 10,
-    borderRadius: 20,
-    zIndex: 10,
-  },
-
-  bubble: {
-    position: "absolute",
-    bottom: 220,
-    alignSelf: "center",
-    backgroundColor: "white",
-    padding: 12,
-    borderRadius: 12,
-    maxWidth: 200,
-    elevation: 5,
-    zIndex: 10,
-  },
-
-  bubbleText: {
-    color: "#111",
-    fontSize: 12,
-  },
-
-  bubbleArrow: {
-    position: "absolute",
-    bottom: -8,
-    left: "50%",
-    marginLeft: -8,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderTopWidth: 8,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderTopColor: "white",
-  },
-  text_sheet: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-});

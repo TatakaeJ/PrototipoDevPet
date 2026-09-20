@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Dimensions } from 'react-native';
+import { styles } from '../../styles/chartsStyles/MonthlyHabitCharts.styles';
 import { LineChart } from 'react-native-gifted-charts';
 import { getMonthHabits } from '../../src/services/habits.service';
 
@@ -197,36 +198,3 @@ function getDynamicMaxY(habitType, maxValue) {
             return maxValue;
     }
 }
-
-const styles = StyleSheet.create({
-    chartContainer: {
-        marginBottom: 16,
-    },
-    chartSubtitle: {
-        color: 'rgba(255,255,255,0.6)',
-        fontSize: 14,
-        marginBottom: 16,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 40,
-    },
-    loadingText: {
-        color: 'rgba(255,255,255,0.6)',
-        fontSize: 14,
-        fontStyle: 'italic',
-    },
-    noDataContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 40,
-    },
-    noDataText: {
-        color: 'rgba(255,255,255,0.6)',
-        fontSize: 14,
-        fontStyle: 'italic',
-    },
-});
