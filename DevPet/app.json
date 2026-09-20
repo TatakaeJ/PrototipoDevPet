@@ -4,10 +4,10 @@
     "slug": "DevPet",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/HeadPet.png",
+    "icon": "./assets/petModel/HeadPet.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/HeadPet.png",
+      "image": "./assets/petModel/HeadPet.png",
       "resizeMode": "contain"
     },
     "ios": {
@@ -19,7 +19,7 @@
       }
     },
     "web": {
-      "favicon": "./assets/HeadPet.png"
+      "favicon": "./assets/petModel/HeadPet.png"
     },
     "plugins": [
       [
