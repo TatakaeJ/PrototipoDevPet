@@ -1,4 +1,25 @@
-// Base de 20 tareas cuantificables
+/**
+ * @file dailyTasks.js
+ * Centraliza las metas de bienestar, constantes de gamificación y el catálogo 
+ * de tareas de la aplicación DevPet.
+ */
+
+// ==========================================
+// METAS GLOBALES DE BIENESTAR (BUSINESS RULES)
+// ==========================================
+
+export const APP_GOALS = {
+    WATER_GOAL_ML: 2500,     // Meta diaria de agua en mililitros
+    WATER_GLASS_ML: 250,     // Equivalencia de un "vaso de agua" estándar en ml
+    SLEEP_GOAL_HOURS: 8,     // Meta diaria ideal de sueño en horas
+    SLEEP_MIN_HOURS: 5,      // Mínimo de horas antes de penalizar/activar sueño en la mascota
+    BREAK_INTERVAL_MIN: 25,  // Duración de un ciclo Pomodoro estándar en minutos
+};
+
+// ==========================================
+// CATÁLOGO DE TAREAS CUANTIFICABLES
+// ==========================================
+
 export const ALL_TASKS = [
     // Tareas de Hidratación
     { id: 1, title: "Bebe 3 vasos de agua", category: "hydration", icon: "tint", points: 10, target: 3, unit: "vasos" },

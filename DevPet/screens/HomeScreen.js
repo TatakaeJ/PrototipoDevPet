@@ -10,11 +10,13 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Modal,
+  Alert,
 } from "react-native";
 import { localStyles } from "../styles/screensStyles/HomeScreen.styles";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Componentes personalizados
+// Iconos
 import {
   BrainCog,
   ShoppingCart,
@@ -24,7 +26,8 @@ import {
   Heart,
   Star,
 } from "lucide-react-native";
-import { Modal, Alert } from "react-native";
+
+// Componentes
 import HabitChart from "../components/charts/HabitChart";
 import Pet from "../components/pet/Pet";
 import Sheet from "../components/Sheet";
@@ -33,30 +36,50 @@ import Water from "../components/habits/Water";
 import Sleep from "../components/habits/Sleep";
 import MLCamera from "../components/ml/MLCamera";
 import DailyTasks from "../components/tasks/DailyTasks";
-import {
-  saveBreak,
-  getUserInfo,
-} from "../src/services/habits.service";
-import { useAuth } from "../context/AuthContext";
-import { getRecommendation } from "../src/utils/recommendations";
 
+// Servicios y Utilidades
+import { saveBreak, getUserInfo } from "../src/services/habits.service";
+import { useAuth } from "../context/AuthContext";
+// TODO: Habilitar sistema de recomendaciones en el futuro
+// import { getRecommendation } from "../src/utils/recommendations";
+
+/**
+ * Subcomponente reutilizable para los botones de acción del footer.
+ */
+const ActionButton = ({ icon, onPress }) => (
+  <TouchableOpacity style={localStyles.actionBtn} onPress={onPress}>
+    {icon}
+  </TouchableOpacity>
+);
+
+/**
+ * Pantalla Principal (Home).
+ * Gestiona la visualización de la mascota, los puntos de experiencia, 
+ * y actúa como controlador de los modales de hábitos e inteligencia artificial.
+ * 
+ * @component
+ */
 export default function HomeScreen({ navigation }) {
   const { userId } = useAuth();
-  const [waterVisible, setWaterVisible] = useState(false);
-  const [sleepVisible, setSleepVisible] = useState(false);
-  const [breakVisible, setBreakVisible] = useState(false);
+  
+  // Ref para refrescar el estado de la mascota desde el padre
+  const petRef = useRef(null);
+
+  // Estados visuales (Cámara)
   const [mlVisible, setMLVisible] = useState(false);
-  const [showBubble, setShowBubble] = useState(false);
-  const [bubbleOpen, setBubbleOpen] = useState(false);
-  const [summary, setSummary] = useState({
-    water: 0,
-    sleep: 0,
-    breaks: 0,
-  });
+  
+  // TODO: Estados de la burbuja deshabilitados temporalmente
+  // const [showBubble, setShowBubble] = useState(false);
+  // const [bubbleOpen, setBubbleOpen] = useState(false);
+
+  // Estados lógicos
+  const [summary, setSummary] = useState({ water: 0, sleep: 0, breaks: 0 });
   const [breakKey, setBreakKey] = useState(0);
   const [initialMode, setInitialMode] = useState("FOCUS");
+  const [points, setPoints] = useState(0);
+  const [userInfo, setUserInfo] = useState(null);
 
-  // Estados de visibilidad para los Sheets (lo organicé mejor)
+  // Control centralizado de modales tipo Sheet
   const [sheets, setSheets] = useState({
     states: false,
     shop: false,
@@ -66,14 +89,18 @@ export default function HomeScreen({ navigation }) {
     rest: false,
   });
 
-  // Información del usuario y puntos (diamantes)
-  const [userInfo, setUserInfo] = useState(null);
-  const [points, setPoints] = useState(0);
+  /**
+   * Abre o cierra un modal específico.
+   * @param {string} name - Nombre del modal ('water', 'sleep', 'states', etc.)
+   * @param {boolean} visible - Estado deseado
+   */
+  const toggleSheet = useCallback((name, visible) => {
+    setSheets((prev) => ({ ...prev, [name]: visible }));
+  }, []);
 
-  // Ref para el componente Pet
-  const petRef = useRef(null);
-
-  // Cargar información del usuario desde la base de datos
+  /**
+   * Carga la información del usuario y sincroniza sus puntos.
+   */
   const loadUserInfo = async () => {
     try {
       const userData = await getUserInfo(userId);
@@ -86,84 +113,54 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const addPoints = (fn) => {
-    setPoints(fn);
-  };
-
-  const onSaved = () => {
-    loadUserInfo(); // Recargar información del usuario para obtener puntos actualizados
-    // Actualizar estado de la mascota automáticamente
-    if (petRef.current) {
-      petRef.current.refreshPetState();
-    }
-  };
-
-  const recommendation = useMemo(() => getRecommendation(summary), [summary]);
-
-  // Memorizar cálculos de niveles
-  const { level, progress } = useMemo(
-    () => ({
-      level: Math.floor(points / 100) + 1,
-      progress: points % 100,
-    }),
-    [points],
-  );
-
-  // ML botón de validación
-  const handleMLSuccess = async () => {
+  /**
+   * Procesa la validación exitosa de la postura desde la cámara de ML.
+   * Guarda el hábito, otorga puntos y reactiva el contador Pomodoro.
+   */
+  const handleMLValidation = async () => {
     try {
       await saveBreak({
-        user_id: "demo-user",
+        user_id: userId, 
         completed_at: new Date().toISOString(),
       });
 
-      addPoints((prev) => prev + 5);
-
-      Alert.alert("¡Buen trabajo!", "Estiramiento validado");
-
+      setPoints((prev) => prev + 5);
+      Alert.alert("¡Validado!", "Estiramiento completado, puntos sumados");
+      
       setMLVisible(false);
+      setInitialMode("BREAK");
+      setBreakKey((prev) => prev + 1);
+      toggleSheet("rest", true);
 
-      // Actualizar estado de la mascota después de validar con IA
       if (petRef.current) {
         petRef.current.refreshPetState();
       }
     } catch (err) {
-      console.log(err);
+      console.log("Error al validar con IA:", err);
+      Alert.alert("Error", "No se pudo guardar la validación");
     }
   };
 
-  const toggleSheet = useCallback((name, visible) => {
-    setSheets((prev) => ({ ...prev, [name]: visible }));
-  }, []);
+  // TODO: Memorización de recomendaciones deshabilitada
+  // const recommendation = useMemo(() => getRecommendation(summary), [summary]);
 
-  const handleBreakFinished = () => {
-    setBreakVisible(false);
-    setMLVisible(true);
-  };
+  // Calcula el nivel y experiencia actual basado en los puntos totales
+  const { level, progress } = useMemo(() => ({
+    level: Math.floor(points / 100) + 1,
+    progress: points % 100,
+  }), [points]);
 
-  const getIcon = () => {
-    if (recommendation.mood === "sleep") return "😴";
-    if (recommendation.mood === "water") return "💧";
-    if (recommendation.mood === "break") return "🧘";
-    return "💡";
-  };
+  // TODO: Efecto de la burbuja de recomendación deshabilitado
+  // useEffect(() => {
+  //   setShowBubble(true);
+  //   const timer = setTimeout(() => setShowBubble(false), 3000);
+  //   return () => clearTimeout(timer);
+  // }, [recommendation]);
 
+  // Carga inicial de datos
   useEffect(() => {
-    setShowBubble(true);
-    const timer = setTimeout(() => setShowBubble(false), 3000);
-    return () => clearTimeout(timer);
-  }, [recommendation]);
-
-  useEffect(() => {
-    loadUserInfo(); // Cargar información del usuario al montar
-  }, []);
-
-  useEffect(() => {
-    setSummary({
-      water: 2,
-      sleep: 8,
-      breaks: 0,
-    });
+    loadUserInfo();
+    setSummary({ water: 2, sleep: 8, breaks: 0 });
   }, []);
 
   return (
@@ -173,40 +170,37 @@ export default function HomeScreen({ navigation }) {
       resizeMode="cover"
     >
       <SafeAreaView style={localStyles.body}>
-        {/* Header: Estados, Tienda, Tareas y PUNTOS (Mejor organizados, antes parecían un aceertijo)*/}
+        {/* --- HEADER --- */}
         <View style={localStyles.topHeader}>
           <View style={localStyles.row}>
-            <TouchableOpacity
-              style={localStyles.miniBtn}
-              onPress={() => toggleSheet("states", true)}
-            >
+            <TouchableOpacity style={localStyles.miniBtn} onPress={() => toggleSheet("states", true)}>
               <BrainCog size={20} color="white" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={localStyles.miniBtn}
-              onPress={() => toggleSheet("shop", true)}
-            >
+            
+            {/* TODO: Implementar lógica de la tienda en futuras fases
+            <TouchableOpacity style={localStyles.miniBtn} onPress={() => toggleSheet("shop", true)}>
               <ShoppingCart size={20} color="white" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={localStyles.miniBtn}
-              onPress={() => toggleSheet("task", true)}
-            >
+            */}
+
+            <TouchableOpacity style={localStyles.miniBtn} onPress={() => toggleSheet("task", true)}>
               <ClipboardList size={20} color="white" />
             </TouchableOpacity>
+            
+            {/* TODO: Botón de prueba IA deshabilitado para producción
             <TouchableOpacity onPress={() => setMLVisible(true)}>
               <Text>🧠 IA</Text>
             </TouchableOpacity>
+            */}
           </View>
 
-          {/* Contador de diamantes pa' el free */}
           <View style={localStyles.pointsContainer}>
             <Text>💎</Text>
             <Text style={localStyles.pointsText}>{points}</Text>
           </View>
         </View>
 
-        {/* XP */}
+        {/* --- BARRA DE EXPERIENCIA (XP) --- */}
         <View style={localStyles.levelSection}>
           <View style={localStyles.levelRow}>
             <Star size={12} color="#fbbf24" fill="#fbbf24" />
@@ -219,141 +213,79 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Área Central: mascota y partículas */}
+        {/* --- ÁREA CENTRAL (MASCOTA) --- */}
         <View style={localStyles.petContainer}>
-          <TouchableOpacity
-            style={localStyles.bubbleButton}
-            onPress={() => setBubbleOpen(!bubbleOpen)}
-          >
+          
+          {/* TODO: Sistema de recomendaciones deshabilitado temporalmente
+          <TouchableOpacity style={localStyles.bubbleButton} onPress={() => setBubbleOpen(!bubbleOpen)}>
             <Text style={{ color: "white" }}>💬</Text>
           </TouchableOpacity>
 
           {bubbleOpen && (
             <View style={localStyles.bubble}>
-              <Text style={localStyles.bubbleText}>{recommendation.text}</Text>
+              <Text style={localStyles.bubbleText}>{recommendation?.text}</Text>
               <View style={localStyles.bubbleArrow} />
             </View>
           )}
+          */}
 
-          <Pet
-            ref={petRef}
-            userId={userId}
-          />
+          <Pet ref={petRef} userId={userId} />
         </View>
 
-        {/* Footer: Acciones de hábitos */}
+        {/* --- FOOTER (HÁBITOS) --- */}
         <View style={localStyles.actions_cont}>
-          <TouchableOpacity
-            style={localStyles.actionBtn}
-            onPress={() => setWaterVisible(true)} // Cambiado aquí
-          >
-            <Droplet size={24} color="white" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={localStyles.actionBtn}
-            onPress={() => setSleepVisible(true)} // Cambiado aquí
-          >
-            <BatteryMedium size={24} color="white" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={localStyles.actionBtn}
-            onPress={() => toggleSheet("rest", true)}
-          >
-            <Heart size={24} color="white" />
-          </TouchableOpacity>
+          <ActionButton icon={<Droplet size={24} color="white" />} onPress={() => toggleSheet("water", true)} />
+          <ActionButton icon={<BatteryMedium size={24} color="white" />} onPress={() => toggleSheet("sleep", true)} />
+          <ActionButton icon={<Heart size={24} color="white" />} onPress={() => toggleSheet("rest", true)} />
         </View>
       </SafeAreaView>
 
-      {/* --- sección de modales organizada--- */}
+      {/* ========================================== */}
+      {/* SECCIÓN DE MODALES (SHEETS)                */}
+      {/* ========================================== */}
 
-      <Sheet
-        visible={sheets.states}
-        onClose={() => toggleSheet("states", false)}
-        animation="slideDown"
-      >
+      <Sheet visible={sheets.states} onClose={() => toggleSheet("states", false)} animation="slideDown">
         <HabitChart userId={userId} />
       </Sheet>
 
-      <Sheet
-        visible={sheets.shop}
-        onClose={() => toggleSheet("shop", false)}
-        animation="slideDown"
-      >
-        <Text style={localStyles.text_sheet}>Tienda de Items</Text>
-      </Sheet>
-
-      <Sheet
-        visible={sheets.task}
-        onClose={() => toggleSheet("task", false)}
-        animation="slideDown"
-      >
+      <Sheet visible={sheets.task} onClose={() => toggleSheet("task", false)} animation="slideDown">
         <DailyTasks
           userId={userId}
           addPoints={setPoints}
           onSaved={() => {
             loadUserInfo();
-            if (petRef.current) {
-              petRef.current.refreshPetState();
-            }
+            if (petRef.current) petRef.current.refreshPetState();
           }}
         />
       </Sheet>
 
-      {/* Registro de Hidratación */}
-      <Sheet
-        visible={waterVisible}
-        onClose={() => setWaterVisible(false)}
-        sheetTop={80}
-        animation="slideUp"
-      >
+      <Sheet visible={sheets.water} onClose={() => toggleSheet("water", false)} sheetTop={80} animation="slideUp">
         <Water
           userId={userId}
           addPoints={setPoints}
           onSaved={() => {
-            setWaterVisible(false);
+            toggleSheet("water", false);
             loadUserInfo();
             if (petRef.current) petRef.current.refreshPetState();
-            setSummary((prev) => ({
-              ...prev,
-              water: prev.water + 1,
-            }));
+            setSummary((prev) => ({ ...prev, water: prev.water + 1 }));
           }}
         />
       </Sheet>
 
-      {/* Registro de Sueño */}
-      <Sheet
-        visible={sleepVisible}
-        onClose={() => setSleepVisible(false)}
-        sheetTop={80}
-        animation="slideUp"
-      >
+      <Sheet visible={sheets.sleep} onClose={() => toggleSheet("sleep", false)} sheetTop={80} animation="slideUp">
         <Sleep
           userId={userId}
           addPoints={setPoints}
           onSaved={() => {
-            setSleepVisible(false);
-            loadUserInfo(); // Recargar puntos desde la base de datos
-            if (petRef.current) {
-              petRef.current.refreshPetState();
-            }
-            setSummary((prev) => ({
-              ...prev,
-              sleep: 8,
-            }));
+            toggleSheet("sleep", false);
+            loadUserInfo();
+            if (petRef.current) petRef.current.refreshPetState();
+            setSummary((prev) => ({ ...prev, sleep: 8 }));
           }}
         />
       </Sheet>
 
-      {/* Pausas Activas */}
-      <Sheet
-        visible={sheets.rest}
-        onClose={() => toggleSheet("rest", false)}
-        sheetTop={80}
-        animation="slideUp"
-      >
+      <Sheet visible={sheets.rest} onClose={() => toggleSheet("rest", false)} sheetTop={80} animation="slideUp">
         <Break
           key={breakKey}
           userId={userId}
@@ -361,78 +293,26 @@ export default function HomeScreen({ navigation }) {
           initialMode={initialMode}
           onSaved={() => {
             loadUserInfo();
-            if (petRef.current) {
-              petRef.current.refreshPetState();
-            }
-
-            setSummary((prev) => ({
-              ...prev,
-              breaks: prev.breaks + 1,
-            }));
+            if (petRef.current) petRef.current.refreshPetState();
+            setSummary((prev) => ({ ...prev, breaks: prev.breaks + 1 }));
           }}
           onCycleComplete={() => {
-            // Esta es la lógica para abrir la cámara
             console.log("Cerrando descanso y abriendo cámara...");
-
             toggleSheet("rest", false);
-
-            setTimeout(() => {
-              setMLVisible(true);
-            }, 600);
+            setTimeout(() => setMLVisible(true), 600);
           }}
         />
       </Sheet>
 
-      {/* MODAL 2: ML */}
+      {/* MODAL IA (Cámara) */}
       <Modal visible={mlVisible} animationType="fade">
         <View style={{ flex: 1, backgroundColor: "black" }}>
-          <MLCamera
-            onDetected={async () => {
-              try {
-                await saveBreak({
-                  user_id: "demo-user",
-                  completed_at: new Date().toISOString(),
-                });
-
-                addPoints((prev) => prev + 5);
-
-                Alert.alert(
-                  "¡Validado!",
-                  "Estiramiento completado, puntos sumados",
-                );
-
-                setMLVisible(false);
-
-                setInitialMode("BREAK");
-
-                setBreakKey((prev) => prev + 1);
-
-                toggleSheet("rest", true);
-
-                if (petRef.current) {
-                  petRef.current.refreshPetState();
-                }
-              } catch (err) {
-                console.log("Error al validar:", err);
-              }
-            }}
-          />
-          <TouchableOpacity
-            onPress={() => setMLVisible(false)}
-            style={{ padding: 15, backgroundColor: "#111" }}
-          >
-            <Text style={{ color: "white", textAlign: "center" }}>
-              Cerrar Cámara
-            </Text>
+          <MLCamera onDetected={handleMLValidation} />
+          <TouchableOpacity onPress={() => setMLVisible(false)} style={{ padding: 15, backgroundColor: "#111" }}>
+            <Text style={{ color: "white", textAlign: "center" }}>Cerrar Cámara</Text>
           </TouchableOpacity>
         </View>
       </Modal>
     </ImageBackground>
   );
 }
-// Limpieza, esto es un subcomponente
-const ActionButton = ({ icon, onPress }) => (
-  <TouchableOpacity style={localStyles.actionBtn} onPress={onPress}>
-    {icon}
-  </TouchableOpacity>
-);

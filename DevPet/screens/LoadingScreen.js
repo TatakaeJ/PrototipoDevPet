@@ -1,17 +1,27 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, Image, Animated } from 'react-native';
 import { styles } from '../styles/screensStyles/LoadingScreen.styles';
 
+/**
+ * Pantalla de Carga (Loading Screen).
+ * Muestra una animación pulsante del logo de DevPet mientras
+ * la aplicación resuelve procesos en segundo plano (como validación de sesión).
+ * 
+ * @component
+ */
 export default function LoadingScreen() {
-  const scaleAnim = new Animated.Value(1);
+  // Se utiliza useRef para persistir el valor de la animación en la memoria 
+  // y evitar que se reinicie si el componente se vuelve a renderizar.
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    // Creamos el ciclo infinito de pulsación (crece y se encoge)
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(scaleAnim, {
           toValue: 1.1,
           duration: 1000,
-          useNativeDriver: true,
+          useNativeDriver: true, // Usa el driver nativo para mejor rendimiento
         }),
         Animated.timing(scaleAnim, {
           toValue: 1,
@@ -20,9 +30,12 @@ export default function LoadingScreen() {
         }),
       ])
     );
+    
     pulse.start();
+    
+    // Limpieza: detiene la animación cuando el usuario sale de esta pantalla
     return () => pulse.stop();
-  }, []);
+  }, [scaleAnim]);
 
   return (
     <View style={styles.container}>
