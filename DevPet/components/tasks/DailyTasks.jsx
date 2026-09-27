@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,18 @@ import {
 import { styles } from '../../styles/tasksStyles/DailyTasks.styles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { getDayHabits, getUserInfo, updateUserPoints } from '../../src/services/habits.service';
-import { ALL_TASKS } from '../../src/constants/dailyTasks';
 
+// Servicios y Constantes
+import { getDayHabits, getUserInfo, updateUserPoints } from '../../src/services/habits.service';
+import { ALL_TASKS, APP_GOALS } from '../../src/constants/dailyTasks';
+
+/**
+ * Modal/Pantalla de Tareas Diarias.
+ * Muestra 5 misiones aleatorias al usuario y evalúa su progreso 
+ * con base en los hábitos registrados durante el día.
+ * 
+ * @component
+ */
 const DailyTasks = ({ userId, addPoints, onSaved }) => {
   const [dailyTasks, setDailyTasks] = useState([]);
   const [habitLogs, setHabitLogs] = useState([]);
@@ -19,7 +28,10 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
   const [claimedTasks, setClaimedTasks] = useState([]);
   const [userInfo, setUserInfo] = useState(null);
 
-  // Cargar o generar tareas diarias basadas en la fecha actual
+  // ==========================================
+  // INICIALIZACIÓN DE DATOS
+  // ==========================================
+
   useEffect(() => {
     const initializeDailyTasks = async () => {
       await loadOrGenerateDailyTasks();
@@ -30,37 +42,29 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
     initializeDailyTasks();
   }, [userId]);
 
-  // Obtener la fecha actual en formato YYYY-MM-DD
-  const getCurrentDate = () => {
-    return new Date().toISOString().split('T')[0];
-  };
+  const getCurrentDate = () => new Date().toISOString().split('T')[0];
 
-  // Guardar tareas del día actual
   const saveDailyTasks = async (tasks, date) => {
     try {
-      const tasksData = {
-        date: date,
-        tasks: tasks,
-        generatedAt: new Date().toISOString()
-      };
+      const tasksData = { date, tasks, generatedAt: new Date().toISOString() };
       await AsyncStorage.setItem('dailyTasks', JSON.stringify(tasksData));
     } catch (error) {
       console.error('Error guardando tareas diarias:', error);
     }
   };
 
-  // Cargar tareas guardadas o generar nuevas si es un nuevo día
+  /**
+   * Verifica en caché si ya hay tareas para el día de hoy.
+   * Si no las hay o es un nuevo día, genera un set de 5 nuevas.
+   */
   const loadOrGenerateDailyTasks = async () => {
     setLoading(true);
-
     try {
       const currentDate = getCurrentDate();
       const savedData = await AsyncStorage.getItem('dailyTasks');
 
       if (savedData) {
         const parsedData = JSON.parse(savedData);
-
-        // Si las tareas guardadas son de hoy, usarlas
         if (parsedData.date === currentDate) {
           setDailyTasks(parsedData.tasks);
           setLoading(false);
@@ -68,19 +72,12 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
         }
       }
 
-      // Si no hay datos guardados o son de otro día, generar nuevas tareas
       const newTasks = generateNewDailyTasks();
       setDailyTasks(newTasks);
-
-      // Limpiar el estado de tareas reclamadas ya que es un nuevo día
       setClaimedTasks([]);
-
-      // Guardar las nuevas tareas para hoy
       await saveDailyTasks(newTasks, currentDate);
-
     } catch (error) {
       console.error('Error cargando tareas diarias:', error);
-      // En caso de error, generar tareas aleatorias como fallback
       const fallbackTasks = generateNewDailyTasks();
       setDailyTasks(fallbackTasks);
       setClaimedTasks([]);
@@ -89,14 +86,14 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
     }
   };
 
-  // Generar 5 tareas aleatorias
+  /**
+   * Mezcla el catálogo y extrae 5 tareas aleatorias sin repetirse.
+   */
   const generateNewDailyTasks = () => {
-    // Mezclar array y seleccionar 5 tareas aleatorias
     const shuffled = [...ALL_TASKS].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, 5);
   };
 
-  // Cargar hábitos del día actual
   const loadDayHabits = async () => {
     try {
       const dayHabits = await getDayHabits(userId);
@@ -107,7 +104,6 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
     }
   };
 
-  // Cargar información del usuario
   const loadUserInfo = async () => {
     try {
       const userData = await getUserInfo(userId);
@@ -117,7 +113,6 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
     }
   };
 
-  // Cargar tareas ya reclamadas hoy
   const loadClaimedTasks = async () => {
     try {
       const currentDate = getCurrentDate();
@@ -127,11 +122,9 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
         if (parsedData.date === currentDate) {
           setClaimedTasks(parsedData.taskIds || []);
         } else {
-          // Si la fecha es diferente, limpiar el estado de tareas reclamadas
           setClaimedTasks([]);
         }
       } else {
-        // Si no hay datos guardados, limpiar el estado
         setClaimedTasks([]);
       }
     } catch (error) {
@@ -140,21 +133,23 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
     }
   };
 
-  // Guardar tareas reclamadas
   const saveClaimedTasks = async (taskIds) => {
     try {
       const currentDate = getCurrentDate();
-      const claimedData = {
-        date: currentDate,
-        taskIds: taskIds
-      };
+      const claimedData = { date: currentDate, taskIds };
       await AsyncStorage.setItem('claimedTasks', JSON.stringify(claimedData));
     } catch (error) {
       console.error('Error guardando tareas reclamadas:', error);
     }
   };
 
-  // Reclamar puntos de una tarea completada
+  // ==========================================
+  // LÓGICA DE RECOMPENSAS
+  // ==========================================
+
+  /**
+   * Suma los puntos al usuario cuando completa una tarea y la marca como reclamada.
+   */
   const claimTaskPoints = async (task) => {
     try {
       if (!userInfo) {
@@ -170,188 +165,125 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
 
       await updateUserPoints(newPoints, userId);
 
-      // Actualizar estado local
       setUserInfo({ ...userInfo, total_points: newPoints });
       setClaimedTasks([...claimedTasks, task.id]);
-
-      // Guardar en AsyncStorage
       await saveClaimedTasks([...claimedTasks, task.id]);
 
-      // Actualizar puntos en el componente padre
-      if (addPoints) {
-        addPoints(newPoints);
-      }
+      if (addPoints) addPoints(newPoints);
 
-      Alert.alert(
-        '¡Tarea Completada!',
-        `Has ganado ${task.points} diamantes 💎`,
-        [{ text: 'OK' }]
-      );
+      Alert.alert('¡Tarea Completada!', `Has ganado ${task.points} diamantes 💎`, [{ text: 'OK' }]);
 
-      if (onSaved) {
-        onSaved();
-      }
+      if (onSaved) onSaved();
     } catch (error) {
       console.error('Error reclamando puntos:', error);
       Alert.alert('Error', 'No se pudo reclamar los puntos');
     }
   };
 
-  // Forzar generación de nuevas tareas (solo para testing o manual)
-  const generateDailyTasks = async () => {
-    setLoading(true);
+  // ==========================================
+  // OPTIMIZACIÓN DE RENDIMIENTO (ESTADÍSTICAS)
+  // ==========================================
 
-    try {
-      const newTasks = generateNewDailyTasks();
-      const currentDate = getCurrentDate();
-
-      setDailyTasks(newTasks);
-      setClaimedTasks([]); // Limpiar tareas reclamadas
-      await loadDayHabits(); // Recargar hábitos del día
-      await saveDailyTasks(newTasks, currentDate);
-
-    } catch (error) {
-      console.error('Error generando nuevas tareas:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Verificar si una tarea está completada basada en los registros reales de habit_logs
-  const isTaskCompleted = (task) => {
-    if (!habitLogs || habitLogs.length === 0) return false;
-
-    // Calcular valores actuales basados en habit_logs
-    let totalWater = 0;
-    let totalSleep = 0;
-    let totalBreaks = 0;
+  /**
+   * Memoriza los totales de los hábitos del usuario para evitar 
+   * calcularlos en cada iteración del mapeo de las tareas en la interfaz.
+   */
+  const userStats = useMemo(() => {
+    let water = 0;
+    let sleep = 0;
+    let breaks = 0;
     let hasSleepData = false;
 
     habitLogs.forEach(log => {
       const habitType = log.healthy_habits?.type;
-      
       switch (habitType) {
         case 'hydration':
-          totalWater += log.value || 0;
+          water += log.value || 0;
           break;
         case 'sleep':
-          if (!hasSleepData || log.value > totalSleep) {
-            totalSleep = log.value || 0;
+          if (!hasSleepData || log.value > sleep) {
+            sleep = log.value || 0;
             hasSleepData = true;
           }
           break;
         case 'active_break':
-          totalBreaks += 1;
+          breaks += 1;
           break;
       }
     });
 
+    return { water, sleep, breaks };
+  }, [habitLogs]);
+
+  /**
+   * Evalúa si una tarea ha sido cumplida según los estadísticos del usuario.
+   */
+  const isTaskCompleted = useCallback((task) => {
+    if (!habitLogs || habitLogs.length === 0) return false;
+    const { water, sleep, breaks } = userStats;
+    const GLASS = APP_GOALS.WATER_GLASS_ML;
+
     switch(task.category) {
       case 'hydration':
-        if (task.unit === 'vasos') {
-          return totalWater >= task.target * 250; // Convertir vasos a ml
-        } else if (task.unit === 'ml') {
-          return totalWater >= task.target;
-        }
-        break;
+        return task.unit === 'vasos' ? water >= task.target * GLASS : water >= task.target;
       case 'sleep':
-        return totalSleep >= task.target;
+        return sleep >= task.target;
       case 'break':
-        if (task.unit === 'ciclos') {
-          return totalBreaks >= task.target;
-        } else if (task.unit === 'pausas') {
-          return totalBreaks >= task.target;
-        }
-        break;
+        return breaks >= task.target; // Sirve tanto para ciclos como pausas
       case 'mixed':
-        // Para tareas mixtas, verificar cada componente
-        if (task.target.water && task.target.sleep) {
-          return totalWater >= task.target.water * 250 && totalSleep >= task.target.sleep;
-        } else if (task.target.water && task.target.breaks) {
-          return totalWater >= task.target.water * 250 && totalBreaks >= task.target.breaks;
-        } else if (task.target.sleep && task.target.breaks) {
-          return totalSleep >= task.target.sleep && totalBreaks >= task.target.breaks;
-        } else if (task.target.cycles && task.target.water) {
-          return totalBreaks >= task.target.cycles && totalWater >= task.target.water * 250;
-        }
-        break;
+        const t = task.target;
+        if (t.water && t.sleep) return water >= t.water * GLASS && sleep >= t.sleep;
+        if (t.water && t.breaks) return water >= t.water * GLASS && breaks >= t.breaks;
+        if (t.sleep && t.breaks) return sleep >= t.sleep && breaks >= t.breaks;
+        if (t.cycles && t.water) return breaks >= t.cycles && water >= t.water * GLASS;
+        return false;
       default:
         return false;
     }
-    return false;
-  };
+  }, [habitLogs, userStats]);
 
-  // Obtener progreso de una tarea basado en datos reales de habit_logs
-  const getTaskProgress = (task) => {
+  /**
+   * Calcula el progreso matemático de una tarea para rellenar la barra visual.
+   */
+  const getTaskProgress = useCallback((task) => {
     if (!habitLogs || habitLogs.length === 0) {
       return { current: 0, target: task.target, percentage: 0 };
     }
 
-    // Calcular valores actuales basados en habit_logs
-    let totalWater = 0;
-    let totalSleep = 0;
-    let totalBreaks = 0;
-    let hasSleepData = false;
-
-    habitLogs.forEach(log => {
-      const habitType = log.healthy_habits?.type;
-      
-      switch (habitType) {
-        case 'hydration':
-          totalWater += log.value || 0;
-          break;
-        case 'sleep':
-          if (!hasSleepData || log.value > totalSleep) {
-            totalSleep = log.value || 0;
-            hasSleepData = true;
-          }
-          break;
-        case 'active_break':
-          totalBreaks += 1;
-          break;
-      }
-    });
-
+    const { water, sleep, breaks } = userStats;
+    const GLASS = APP_GOALS.WATER_GLASS_ML;
     let current = 0;
     let target = task.target;
 
     switch(task.category) {
       case 'hydration':
-        if (task.unit === 'vasos') {
-          current = Math.floor(totalWater / 250);
-        } else if (task.unit === 'ml') {
-          current = totalWater;
-        }
+        current = task.unit === 'vasos' ? Math.floor(water / GLASS) : water;
         break;
       case 'sleep':
-        current = totalSleep;
+        current = sleep;
         break;
       case 'break':
-        current = totalBreaks;
+        current = breaks;
         break;
       case 'mixed':
-        // Para tareas mixtas, mostrar el progreso mínimo de todas las condiciones
         const progresses = [];
-        if (task.target.water) {
-          progresses.push(Math.floor(totalWater / 250));
-        }
-        if (task.target.sleep) {
-          progresses.push(totalSleep);
-        }
-        if (task.target.breaks) {
-          progresses.push(totalBreaks);
-        }
-        if (task.target.cycles) {
-          progresses.push(totalBreaks);
-        }
+        if (task.target.water) progresses.push(Math.floor(water / GLASS));
+        if (task.target.sleep) progresses.push(sleep);
+        if (task.target.breaks) progresses.push(breaks);
+        if (task.target.cycles) progresses.push(breaks);
+        
         current = Math.min(...progresses);
-        target = Object.values(task.target)[0]; // Tomar el primer target como referencia
+        target = Object.values(task.target)[0]; 
         break;
     }
 
     const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
     return { current, target, percentage };
-  };
+  }, [habitLogs, userStats]);
+
+  // ==========================================
+  // HELPERS VISUALES
+  // ==========================================
 
   const getCategoryColor = (category) => {
     switch(category) {
@@ -372,6 +304,10 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
       default: return 'General';
     }
   };
+
+  // ==========================================
+  // RENDERIZADO
+  // ==========================================
 
   if (loading) {
     return (

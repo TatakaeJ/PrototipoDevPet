@@ -1,7 +1,14 @@
 import { supabase } from './supabase.config';
 import { hashPassword } from '../utils/crypto';
 
-// Verificar si usuario o email ya existe
+/**
+ * Verifica si un nombre de usuario o correo electrónico ya se encuentra registrado en la base de datos.
+ * 
+ * @param {string} user_name - El nombre de usuario a verificar.
+ * @param {string} email - El correo electrónico a verificar.
+ * @returns {Promise<boolean>} Retorna `true` si el usuario o email ya existe, `false` en caso contrario.
+ * @throws {Error} Lanza un error si falla la consulta a Supabase.
+ */
 export const checkUserExists = async (user_name, email) => {
     try {
         const { data, error } = await supabase
@@ -18,7 +25,16 @@ export const checkUserExists = async (user_name, email) => {
     }
 };
 
-// Registrar nuevo usuario
+/**
+ * Registra un nuevo usuario en la base de datos con contraseña encriptada.
+ * Inicializa los puntos totales del usuario en 0.
+ * 
+ * @param {string} user_name - Nombre de usuario único.
+ * @param {string} email - Correo electrónico del usuario.
+ * @param {string} password - Contraseña en texto plano proporcionada por el usuario.
+ * @returns {Promise<Object>} Retorna un objeto que contiene el `user_id` del nuevo usuario.
+ * @throws {Error} Lanza un error si el usuario ya existe o si falla la inserción.
+ */
 export const registerUser = async (user_name, email, password) => {
     try {
         const exists = await checkUserExists(user_name, email);
@@ -26,7 +42,6 @@ export const registerUser = async (user_name, email, password) => {
             throw new Error('El usuario o email ya está registrado');
         }
 
-        // Usamos nuestra nueva función de utilidad
         const password_hash = hashPassword(password);
 
         const { data, error } = await supabase
@@ -50,11 +65,16 @@ export const registerUser = async (user_name, email, password) => {
     }
 };
 
-// Iniciar sesión
+/**
+ * Autentica a un usuario verificando sus credenciales contra la base de datos.
+ * 
+ * @param {string} user_name - Nombre de usuario.
+ * @param {string} password - Contraseña en texto plano para verificar.
+ * @returns {Promise<Object>} Retorna un objeto con el `user_id` si las credenciales son válidas.
+ * @throws {Error} Lanza un error si el usuario no es encontrado o la contraseña es incorrecta.
+ */
 export const loginUser = async (user_name, password) => {
     try {
-        console.log('Intentando login para user_name:', user_name);
-        
         const { data, error } = await supabase
             .from('users')
             .select('user_id, password_hash')
@@ -62,10 +82,11 @@ export const loginUser = async (user_name, password) => {
             .single();
 
         if (error) {
-            console.error('Error en consulta:', error);
+            // PGRST116 es el código de Supabase cuando `.single()` no encuentra resultados
             if (error.code === 'PGRST116') {
                 throw new Error('Usuario no encontrado');
             }
+            console.error('Error en consulta de login:', error);
             throw error;
         }
 
@@ -73,20 +94,17 @@ export const loginUser = async (user_name, password) => {
             throw new Error('Usuario no encontrado');
         }
 
-        // Comparamos usando la función de utilidad
         const input_password_hash = hashPassword(password);
-        console.log('Hash de password ingresado:', input_password_hash);
-        console.log('Hash en DB:', data.password_hash);
         
         const isMatch = input_password_hash === data.password_hash;
         if (!isMatch) {
             throw new Error('Contraseña incorrecta');
         }
 
-        console.log('Login exitoso:', data.user_id);
+        console.log('Login exitoso para usuario ID:', data.user_id);
         return { user_id: data.user_id };
     } catch (error) {
-        console.error('Error en login:', error);
+        console.error('Error en login:', error.message);
         throw error;
     }
 };

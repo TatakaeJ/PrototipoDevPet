@@ -13,11 +13,18 @@ import {
 import { styles } from '../styles/screensStyles/AuthScreen.styles';
 import { useAuth } from '../context/AuthContext';
 
+/**
+ * Pantalla de Autenticación.
+ * Permite al usuario iniciar sesión o registrar una nueva cuenta.
+ * 
+ * @component
+ */
 export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // TODO: Implementar lógica de persistencia para el "Recuérdame" (ej. AsyncStorage)
   const [rememberMe, setRememberMe] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -27,18 +34,68 @@ export default function AuthScreen() {
     confirm_password: '',
   });
 
-  const { login, register } = useAuth();
+  // Extraemos 'loading' del contexto para mantener una única fuente de verdad
+  const { login, register, loading } = useAuth();
 
+  /**
+   * Actualiza el estado del formulario dinámicamente.
+   * 
+   * @param {string} field - Nombre del campo a actualizar (ej. 'email', 'password').
+   * @param {string} value - Nuevo valor ingresado por el usuario.
+   */
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async () => {
-    setLoading(true);
+  /**
+   * Valida los campos del formulario antes de enviarlos al servidor.
+   * Verifica campos vacíos, formato de correo y longitud de contraseñas.
+   * 
+   * @returns {boolean} True si el formulario es válido, False si hay errores.
+   */
+  const validateForm = () => {
+    const { user_name, email, password, confirm_password } = formData;
 
+    if (isLogin) {
+      if (!user_name || !password) {
+        Alert.alert('Error', 'Todos los campos son obligatorios');
+        return false;
+      }
+    } else {
+      if (!user_name || !email || !password || !confirm_password) {
+        Alert.alert('Error', 'Todos los campos son obligatorios');
+        return false;
+      }
+      
+      // Validación de formato de correo electrónico
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        Alert.alert('Error', 'Por favor ingresa un correo electrónico válido');
+        return false;
+      }
+
+      if (password !== confirm_password) {
+        Alert.alert('Error', 'Las contraseñas no coinciden');
+        return false;
+      }
+      
+      if (password.length < 6) {
+        Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+        return false;
+      }
+    }
+    return true;
+  };
+
+  /**
+   * Ejecuta el flujo de autenticación (Login o Registro) si el formulario es válido.
+   */
+  const handleSubmit = async () => {
     try {
       if (isLogin) {
         await login(formData.user_name.trim(), formData.password.trim());
+        // Nota: Si el login es exitoso y el userId se actualiza en el contexto, 
+        // la navegación suele desmontar esta pantalla automáticamente.
         Alert.alert('¡Bienvenido!', 'Has iniciado sesión correctamente');
       } else {
         await register(
@@ -51,34 +108,12 @@ export default function AuthScreen() {
       }
     } catch (error) {
       Alert.alert('Error', error.message);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const validateForm = () => {
-    if (isLogin) {
-      if (!formData.user_name || !formData.password) {
-        Alert.alert('Error', 'Todos los campos son obligatorios');
-        return false;
-      }
-    } else {
-      if (!formData.user_name || !formData.email || !formData.password || !formData.confirm_password) {
-        Alert.alert('Error', 'Todos los campos son obligatorios');
-        return false;
-      }
-      if (formData.password !== formData.confirm_password) {
-        Alert.alert('Error', 'Las contraseñas no coinciden');
-        return false;
-      }
-      if (formData.password.length < 6) {
-        Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
-        return false;
-      }
-    }
-    return true;
-  };
-
+  /**
+   * Manejador del botón principal para validar y enviar.
+   */
   const handlePress = () => {
     if (validateForm()) {
       handleSubmit();
@@ -92,7 +127,8 @@ export default function AuthScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          {/* Logo */}
+          
+          {/* Renderizado condicional del Logo solo en Login */}
           {isLogin && (
             <View style={styles.logoContainer}>
               <Image
@@ -103,14 +139,12 @@ export default function AuthScreen() {
             </View>
           )}
 
-          {/* Title */}
           <Text style={styles.title}>
             {isLogin ? 'Iniciar Sesión' : 'Crea tu cuenta'}
           </Text>
 
-          {/* Form */}
           <View style={styles.form}>
-            {/* User Name */}
+            {/* Campo: Usuario */}
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
@@ -123,7 +157,7 @@ export default function AuthScreen() {
               />
             </View>
 
-            {/* Email (solo registro) */}
+            {/* Campo: Correo (Solo Registro) */}
             {!isLogin && (
               <View style={styles.inputContainer}>
                 <TextInput
@@ -139,7 +173,7 @@ export default function AuthScreen() {
               </View>
             )}
 
-            {/* Password */}
+            {/* Campo: Contraseña */}
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
@@ -159,7 +193,7 @@ export default function AuthScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Confirm Password (solo registro) */}
+            {/* Campo: Confirmar Contraseña (Solo Registro) */}
             {!isLogin && (
               <View style={styles.inputContainer}>
                 <TextInput
@@ -181,7 +215,7 @@ export default function AuthScreen() {
               </View>
             )}
 
-            {/* Remember Me (solo registro) */}
+            {/* TODO: Implementar lógica de persistencia para el "Recuérdame" en futuras versiones 
             {!isLogin && (
               <TouchableOpacity
                 style={styles.checkboxContainer}
@@ -193,8 +227,9 @@ export default function AuthScreen() {
                 <Text style={styles.checkboxLabel}>Recuérdame</Text>
               </TouchableOpacity>
             )}
+            */}
 
-            {/* Submit Button */}
+            {/* Botón Principal (Login/Registro) */}
             <TouchableOpacity
               style={[styles.submitButton, loading && styles.submitButtonDisabled]}
               onPress={handlePress}
@@ -205,7 +240,7 @@ export default function AuthScreen() {
               </Text>
             </TouchableOpacity>
 
-            {/* Social Login (solo registro) */}
+            {/* TODO: Implementar proveedores OAuth (Facebook, Google, WhatsApp) en el futuro
             {!isLogin && (
               <View style={styles.socialLogin}>
                 <Text style={styles.socialText}>O continúa con</Text>
@@ -222,12 +257,14 @@ export default function AuthScreen() {
                 </View>
               </View>
             )}
+            */}
 
-            {/* Toggle Login/Register */}
+            {/* Botón para alternar vistas (Login <-> Registro) */}
             <TouchableOpacity
               style={styles.toggleButton}
               onPress={() => {
                 setIsLogin(!isLogin);
+                // Limpia el formulario al cambiar de vista
                 setFormData({
                   user_name: '',
                   email: '',
@@ -242,6 +279,7 @@ export default function AuthScreen() {
                   : '¿Ya tienes una cuenta? Iniciar sesión'}
               </Text>
             </TouchableOpacity>
+
           </View>
         </View>
       </ScrollView>
