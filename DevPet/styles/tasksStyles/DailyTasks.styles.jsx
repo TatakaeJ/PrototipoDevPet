@@ -9,7 +9,6 @@ export const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
   },
   loadingText: {
     color: 'rgba(255,255,255,0.6)',

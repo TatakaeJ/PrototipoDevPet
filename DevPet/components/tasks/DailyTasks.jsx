@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  ActivityIndicator
 } from 'react-native';
 import { styles } from '../../styles/tasksStyles/DailyTasks.styles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -247,7 +248,11 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
    */
   const getTaskProgress = useCallback((task) => {
     if (!habitLogs || habitLogs.length === 0) {
-      return { current: 0, target: task.target, percentage: 0 };
+      return { 
+        current: 0, 
+        target: task.category === 'mixed' ? Object.keys(task.target).length : task.target, 
+        percentage: 0 
+      };
     }
 
     const { water, sleep, breaks } = userStats;
@@ -266,19 +271,27 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
         current = breaks;
         break;
       case 'mixed':
-        const progresses = [];
-        if (task.target.water) progresses.push(Math.floor(water / GLASS));
-        if (task.target.sleep) progresses.push(sleep);
-        if (task.target.breaks) progresses.push(breaks);
-        if (task.target.cycles) progresses.push(breaks);
+        // Contamos cuántos sub-objetivos se han cumplido
+        let completedGoals = 0;
+        const t = task.target;
+
+        if (t.water && water >= t.water * GLASS) completedGoals++;
+        if (t.sleep && sleep >= t.sleep) completedGoals++;
+        if (t.breaks && breaks >= t.breaks) completedGoals++;
+        if (t.cycles && breaks >= t.cycles) completedGoals++;
         
-        current = Math.min(...progresses);
-        target = Object.values(task.target)[0]; 
+        current = completedGoals;
+        target = Object.keys(t).length; // Total de sub-objetivos (casi siempre 2)
         break;
     }
 
-    const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-    return { current, target, percentage };
+    // Limitamos "current" para que no sobrepase a "target"
+    const cappedCurrent = Math.min(current, target);
+
+    // Calculamos el porcentaje usando el valor ya limitado
+    const percentage = target > 0 ? (cappedCurrent / target) * 100 : 0;
+    
+    return { current: cappedCurrent, target, percentage };
   }, [habitLogs, userStats]);
 
   // ==========================================
@@ -311,8 +324,11 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Cargando tareas...</Text>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0F172A' }}>
+        <ActivityIndicator size="large" color="#4B9FE1" />
+        <Text style={{ marginTop: 15, color: '#94A3B8', fontSize: 16, fontWeight: '500' }}>
+          Cargando misiones...
+        </Text>
       </View>
     );
   }
@@ -366,8 +382,7 @@ const DailyTasks = ({ userId, addPoints, onSaved }) => {
                 </View>
                 <Text style={styles.progressText}>
                   {task.category === 'mixed'
-                    ? `Progreso: ${progress.current}/${Object.keys(task.target).length} objetivos`
-                    : `${progress.current} / ${progress.target} ${task.unit}`
+                    ? `Progreso: ${progress.current}/${progress.target} objetivos` : `${progress.current} / ${progress.target} ${task.unit}`
                   }
                 </Text>
               </View>
