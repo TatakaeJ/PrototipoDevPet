@@ -3,6 +3,7 @@ import {
     calculateEnergyLevel,
     getTodayWaterTotal,
     getTodaySleepHours,
+    getUserInfo
 } from '../services/habits.service';
 
 // Importamos las metas globales centralizadas
@@ -22,6 +23,7 @@ export const usePetState = (userId) => {
     const [energyLevel, setEnergyLevel] = useState(50);
     const [isSleepy, setIsSleepy] = useState(false);
     const [isThirsty, setIsThirsty] = useState(false);
+    const [equippedPet, setEquippedPet] = useState('gato');
     
     // Estado interno para saber si el ciclo de sueño debe estar corriendo
     const [sleepyActive, setSleepyActive] = useState(false);
@@ -188,12 +190,26 @@ export const usePetState = (userId) => {
     }, [userId]);
 
     /**
+     * Consulta qué mascota tiene equipada el usuario actualmente.
+     */
+    const loadEquippedPet = useCallback(async () => {
+        try {
+            const userInfo = await getUserInfo(userId);
+            if (userInfo && userInfo.equipped_pet) {
+                setEquippedPet(userInfo.equipped_pet);
+            }
+        } catch (err) {
+            console.error('Error cargando mascota equipada:', err);
+        }
+    }, [userId]);
+
+    /**
      * Función principal para recalcular todos los estados de la mascota al mismo tiempo.
      * Expuesta al exterior para ser llamada cuando el usuario registra un nuevo hábito.
      */
     const refreshPetState = useCallback(async () => {
-        await Promise.all([loadBaseMood(), checkSleepy(), checkThirsty()]);
-    }, [loadBaseMood, checkSleepy, checkThirsty]);
+        await Promise.all([loadBaseMood(), checkSleepy(), checkThirsty(), loadEquippedPet()]);
+    }, [loadBaseMood, checkSleepy, checkThirsty, loadEquippedPet]);
 
     // Efecto de inicialización y limpieza al montar/desmontar el hook
     useEffect(() => {
@@ -205,5 +221,5 @@ export const usePetState = (userId) => {
         };
     }, [refreshPetState]);
 
-    return { baseMood, isSleepy, isThirsty, refreshPetState };
+    return { baseMood, isSleepy, isThirsty, equippedPet, refreshPetState };
 };

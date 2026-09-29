@@ -4,6 +4,9 @@ import { styles } from '../../styles/petStyles/Pet.styles';
 import PetParticles from './PetParticles';
 import { usePetState } from '../../src/hooks/usePetState';
 
+// Importamos el catálogo de la tienda para obtener las imágenes dinámicas
+import { PET_CATALOG } from '../../src/constants/shop';
+
 // Memorizamos el componente de partículas para evitar re-renderizados innecesarios
 const OptimizedParticles = React.memo(PetParticles);
 
@@ -19,7 +22,7 @@ const OptimizedParticles = React.memo(PetParticles);
  */
 const Pet = forwardRef(({ userId }, ref) => {
     // Delegamos toda la lógica compleja de cálculo de estados al custom hook
-    const { baseMood, isSleepy, isThirsty, refreshPetState } = usePetState(userId);
+    const { baseMood, isSleepy, isThirsty, equippedPet, refreshPetState } = usePetState(userId);
     
     // Estado local para capturar el tamaño dinámico de la imagen renderizada
     const [petArea, setPetArea] = useState({ width: 0, height: 0 });
@@ -53,17 +56,18 @@ const Pet = forwardRef(({ userId }, ref) => {
         });
     }, []);
 
+    // Determinamos qué imagen renderizar basándonos en el ID de la mascota equipada.
+    // Si por algún motivo falla, mostramos al 'gato' por defecto.
+    const currentPetImage = PET_CATALOG[equippedPet]?.image || PET_CATALOG['gato'].image;
+
     return (
         <>
             <View style={styles.petBox}>
-                {/* 
-                  Nota: La imagen base siempre es neutral. Las expresiones faciales 
-                  y estados (triste, feliz, sediento) se manejan vía PetParticles. 
-                */}
                 <Image
-                    source={require('../../assets/petStates/DevPet_neutral.png')}
+                    source={currentPetImage}
                     style={styles.petImage}
                     onLayout={handlePetLayout}
+                    resizeMode="contain"
                 />
             </View>
 

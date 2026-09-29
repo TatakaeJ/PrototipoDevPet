@@ -36,6 +36,7 @@ import Water from "../components/habits/Water";
 import Sleep from "../components/habits/Sleep";
 import MLCamera from "../components/ml/MLCamera";
 import DailyTasks from "../components/tasks/DailyTasks";
+import Shop from "../components/shop/Shop";
 
 // Servicios y Utilidades
 import { saveBreak, getUserInfo } from "../src/services/habits.service";
@@ -177,11 +178,9 @@ export default function HomeScreen({ navigation }) {
               <BrainCog size={20} color="white" />
             </TouchableOpacity>
             
-            {/* TODO: Implementar lógica de la tienda en futuras fases
             <TouchableOpacity style={localStyles.miniBtn} onPress={() => toggleSheet("shop", true)}>
               <ShoppingCart size={20} color="white" />
             </TouchableOpacity>
-            */}
 
             <TouchableOpacity style={localStyles.miniBtn} onPress={() => toggleSheet("task", true)}>
               <ClipboardList size={20} color="white" />
@@ -246,6 +245,21 @@ export default function HomeScreen({ navigation }) {
 
       <Sheet visible={sheets.states} onClose={() => toggleSheet("states", false)} animation="slideDown">
         <HabitChart userId={userId} />
+      </Sheet>
+
+      <Sheet visible={sheets.shop} onClose={() => toggleSheet("shop", false)} animation="slideDown">
+        <Shop 
+          userId={userId} 
+          currentPoints={points} 
+          onPointsUpdate={setPoints} 
+          onEquipSuccess={(newPetId) => {
+            // Cuando equipamos una nueva mascota, recargamos la info y la vista principal
+            loadUserInfo();
+            if (petRef.current) {
+              petRef.current.refreshPetState();
+            }
+          }}
+        />
       </Sheet>
 
       <Sheet visible={sheets.task} onClose={() => toggleSheet("task", false)} animation="slideDown">
