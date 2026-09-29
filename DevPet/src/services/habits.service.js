@@ -691,3 +691,88 @@ export const calculateEnergyLevel = async (userId = 19) => {
         throw err;
     }
 };
+
+// ==========================================
+// FUNCIONES DE LA TIENDA (SHOP)
+// ==========================================
+
+// Obtener el inventario de mascotas del usuario (las que ya compró)
+export const getUserInventory = async (userId = 19) => {
+    try {
+        const { data, error } = await supabase
+            .from('user_pets')
+            .select('pet_id')
+            .eq('user_id', userId);
+
+        if (error) {
+            console.error("Error obteniendo inventario:", error);
+            throw new Error(`Error al conectar con Supabase: ${error.message}`);
+        }
+
+        // Retornamos un array simple con los IDs de las mascotas compradas (ej: ['conejo', 'dragon'])
+        return data ? data.map(item => item.pet_id) : [];
+    } catch (error) {
+        console.error('Error en getUserInventory:', error);
+        throw error;
+    }
+};
+
+// Comprar una nueva mascota
+export const purchasePet = async (petId, price, userId = 19) => {
+    try {
+        // 1. Verificamos los puntos actuales del usuario
+        const userInfo = await getUserInfo(userId);
+        const currentPoints = userInfo?.total_points || 0;
+
+        if (currentPoints < price) {
+            throw new Error('No tienes suficientes diamantes 💎 para esta mascota.');
+        }
+
+        // 2. Insertamos la mascota en el inventario (user_pets)
+        const { error: insertError } = await supabase
+            .from('user_pets')
+            .insert([{
+                user_id: userId,
+                pet_id: petId
+            }]);
+
+        if (insertError) {
+            // Si el código de error es 23505 (Unique violation), es porque ya la tiene
+            if (insertError.code === '23505') {
+                 throw new Error('Ya posees esta mascota.');
+            }
+            throw new Error(`Error guardando mascota: ${insertError.message}`);
+        }
+
+        // 3. Restamos los puntos al usuario
+        const newPoints = currentPoints - price;
+        await updateUserPoints(newPoints, userId);
+
+        return { success: true, newPoints };
+    } catch (error) {
+        console.error('Error en purchasePet:', error);
+        throw error;
+    }
+};
+
+// Equipar una mascota
+export const equipPet = async (petId, userId = 19) => {
+    try {
+        console.log(`Equipando mascota ${petId} para usuario ${userId}`);
+
+        const { error } = await supabase
+            .from('users')
+            .update({ equipped_pet: petId })
+            .eq('user_id', userId);
+
+        if (error) {
+            console.error("Error equipando mascota:", error);
+            throw new Error(`Error al equipar en Supabase: ${error.message}`);
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error en equipPet:', error);
+        throw error;
+    }
+};
