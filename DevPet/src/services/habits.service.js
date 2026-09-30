@@ -1,67 +1,98 @@
 import { supabase } from './supabase.config';
 import { getLocalDate, getLocalTime } from '../utils/time';
 
+/**
+ * SERVICIO DE GESTIÓN DE HÁBITOS Y ESTADO DE LA MASCOTA
+ * 
+ * Este archivo centraliza todas las consultas y mutaciones en Supabase relacionadas con:
+ * 1. Registro de hábitos diarios (Agua, Sueño, Pausas Activas).
+ * 2. Consulta de métricas para reportes (Día, Semana, Mes).
+ * 3. Cálculo dinámico y actualización del estado físico/emocional de la mascota.
+ */
+
+// ==========================================
+// 1. REGISTRO DE HÁBITOS (INSERTS)
+// ==========================================
+
+/**
+ * Registra el consumo de agua del usuario.
+ * @param {number} waterAmount - Cantidad de agua ingresada (ej. en mililitros).
+ * @param {number} userId - ID del usuario en sesión.
+ */
 export const saveWaterLog = async (waterAmount, userId) => {
     try {
         const { error } = await supabase
             .from('habit_logs')
             .insert([{
                 user_id: userId,
-                habit_id: 1,
+                habit_id: 1, // 1 representa Hidratación en la BD
                 value: waterAmount,
                 log_date: getLocalDate(),
                 log_hour: getLocalTime(),
-            }])
+            }]);
 
-        if (error) throw error
-        return { success: true }
+        if (error) throw error;
+        return { success: true };
     } catch (error) {
-        console.error('Error guardando registro de agua:', error)
-        throw error
+        console.error('Error guardando registro de agua:', error);
+        throw error;
     }
-}
+};
 
+/**
+ * Registra las horas de sueño del usuario.
+ * @param {number} sleepHours - Cantidad de horas dormidas.
+ * @param {number} userId - ID del usuario en sesión.
+ */
 export const saveSleepLog = async (sleepHours, userId) => {
     try {
         const { error } = await supabase
             .from('habit_logs')
             .insert([{
                 user_id: userId,
-                habit_id: 2,
+                habit_id: 2, // 2 representa Sueño en la BD
                 value: sleepHours,
                 log_date: getLocalDate(),
                 log_hour: getLocalTime(),
-            }])
+            }]);
 
-        if (error) throw error
-        return { success: true }
+        if (error) throw error;
+        return { success: true };
     } catch (error) {
-        console.error('Error guardando registro de sueño:', error)
-        throw error
+        console.error('Error guardando registro de sueño:', error);
+        throw error;
     }
-}
+};
 
+/**
+ * Registra la ejecución de una pausa activa realizada de manera exitosa.
+ * @param {number} userId - ID del usuario en sesión.
+ */
 export const saveActiveBreakLog = async (userId) => {
     try {
         const { error } = await supabase
             .from('habit_logs')
             .insert([{
                 user_id: userId,
-                habit_id: 3,
-                value: 1,
+                habit_id: 3, // 3 representa Pausa Activa en la BD
+                value: 1, // Se contabiliza como una sesión completada
                 log_date: getLocalDate(),
                 log_hour: getLocalTime(),
-            }])
+            }]);
 
-        if (error) throw error
-        return { success: true }
+        if (error) throw error;
+        return { success: true };
     } catch (error) {
-        console.error('Error guardando registro de pausa activa:', error)
-        throw error
+        console.error('Error guardando registro de pausa activa:', error);
+        throw error;
     }
-}
+};
 
-// Guardar sesión de pausa activa en active_break_sessions (pendiente por uso)
+/**
+ * Guarda el desglose detallado (duración y marcas de tiempo) de una sesión de pausa activa.
+ * @param {object} sessionData - Contiene startTime, endTime y duration de la sesión.
+ * @param {number} userId - ID del usuario.
+ */
 export const saveBreakSession = async (sessionData, userId) => {
   try {
     const { error } = await supabase
@@ -72,214 +103,155 @@ export const saveBreakSession = async (sessionData, userId) => {
         end_time: sessionData.endTime,
         duration_seconds: sessionData.duration,
         completed_at: getLocalTime()
-      }])
+      }]);
 
-    if (error) throw error
-    return { success: true }
+    if (error) throw error;
+    return { success: true };
   } catch (error) {
-    console.error('Error guardando sesión de pausa activa:', error)
-    throw error
+    console.error('Error guardando sesión de pausa activa:', error);
+    throw error;
   }
-}
+};
 
-// Mantener compatibilidad temporal con saveHabits para componentes que aún lo usan
+/**
+ * Función puente/soporte para mantener compatibilidad con componentes antiguos.
+ * Delega el flujo automáticamente a la función específica requerida.
+ */
 export const saveHabits = async (data, userId) => {
-  // Esta función ahora delega a las funciones específicas
   if (data.water) {
     return await saveWaterLog(data.water, userId);
   } else if (data.sleep_hours) {
     return await saveSleepLog(data.sleep_hours, userId);
   }
-  
   throw new Error('Tipo de hábito no soportado en saveHabits');
-}
+};
 
 export const saveBreak = async (data) => {
   try {
     const { error } = await supabase
       .from('breaks')
-      .insert([data])
+      .insert([data]);
 
-    if (error) throw error
-
-    return true
+    if (error) throw error;
+    return true;
   } catch (err) {
-    throw err
+    throw err;
   }
-}
+};
 
-// consultas con la estructura de la base de datos
-// Obtener hábitos base (healthy_habits)
+
+// ==========================================
+// 2. CONSULTAS A LA BASE DE DATOS (SELECTS)
+// ==========================================
+
+/**
+ * Recupera la lista maestra de hábitos saludables base definidos en el sistema.
+ */
 export const getHealthyHabits = async () => {
-  console.log(" Buscando hábitos base para user_id: 19");
-
   const { data, error } = await supabase
     .from('healthy_habits')
-    .select(`
-      id,
-      name,
-      type,
-      unit,
-      daily_goal,
-      points_per_log
-    `)
+    .select('id, name, type, unit, daily_goal, points_per_log');
 
   if (error) {
-    console.error(" Error obteniendo hábitos base:", error)
-    throw new Error(`Error al conectar con Supabase: ${error.message}`)
+    console.error("Error obteniendo hábitos base:", error);
+    throw new Error(`Error al conectar con Supabase: ${error.message}`);
   }
+  return data || [];
+};
 
-  if (!data || data.length === 0) {
-    console.warn("No se encontraron hábitos base")
-    return []
-  }
-
-  console.log(" Hábitos base obtenidos:", data.length, "registros")
-  return data
-}
-
-// Obtener todos los hábitos del día para la gráfica
+/**
+ * Obtiene los registros de hábitos guardados específicamente en la fecha del día de hoy.
+ */
 export const getDayHabits = async (userId) => {
-  const localDate = getLocalDate(); // YYYY-MM-DD local
+  const localDate = getLocalDate();
 
   const { data, error } = await supabase
     .from('habit_logs')
     .select(`
       *,
-      healthy_habits (
-        name,
-        type,
-        unit,
-        daily_goal
-      )
+      healthy_habits (name, type, unit, daily_goal)
     `)
     .eq('user_id', userId)
     .eq('log_date', localDate)
-    .order('log_date', { ascending: false })
+    .order('log_date', { ascending: false });
 
   if (error) {
-    console.error(" Error de Supabase:", error)
-    throw new Error(`Error al conectar con Supabase: ${error.message}`)
+    console.error("Error de Supabase al obtener hábitos del día:", error);
+    throw new Error(`Error al conectar con Supabase: ${error.message}`);
   }
+  return data || [];
+};
 
-  if (!data || data.length === 0) {
-    console.warn("No se encontraron hábitos para hoy")
-    return []
-  }
-
-  return data
-}
-
-// Obtener hábitos de la semana
+/**
+ * Recupera el histórico de hábitos acumulados durante los últimos 7 días.
+ */
 export const getWeekHabits = async (userId) => {
   const today = new Date();
   const weekAgo = new Date(today);
-  weekAgo.setDate(today.getDate() - 6); // Últimos 7 días incluyendo hoy
+  weekAgo.setDate(today.getDate() - 6);
   
   const startDate = weekAgo.toLocaleDateString('en-CA');
   const endDate = today.toLocaleDateString('en-CA');
-  
-  console.log("Buscando hábitos de la semana:", {
-    start_date: startDate,
-    end_date: endDate,
-    user_id: userId
-  });
 
   const { data, error } = await supabase
     .from('habit_logs')
     .select(`
       *,
-      healthy_habits (
-        name,
-        type,
-        unit
-      )
+      healthy_habits (name, type, unit)
     `)
     .eq('user_id', userId)
     .gte('log_date', startDate)
     .lte('log_date', endDate)
-    .order('log_date', { ascending: true })
+    .order('log_date', { ascending: true });
 
   if (error) {
-    console.error("Error obteniendo hábitos semanales:", error)
-    throw new Error(`Error al conectar con Supabase: ${error.message}`)
+    console.error("Error obteniendo hábitos semanales:", error);
+    throw new Error(`Error al conectar con Supabase: ${error.message}`);
   }
+  return data || [];
+};
 
-  if (!data || data.length === 0) {
-    console.warn("No se encontraron hábitos para la semana")
-    return []
-  }
-
-  console.log("Datos semanales obtenidos:", data.length, "registros")
-  return data
-}
-
-// Obtener hábitos del mes
+/**
+ * Recupera el histórico de hábitos acumulados durante los últimos 30 días.
+ */
 export const getMonthHabits = async (userId) => {
   const today = new Date();
   const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(today.getDate() - 29); // Últimos 30 días incluyendo hoy
+  thirtyDaysAgo.setDate(today.getDate() - 29);
   
   const startDate = thirtyDaysAgo.toLocaleDateString('en-CA');
   const endDate = today.toLocaleDateString('en-CA');
-  
-  console.log("Buscando hábitos del mes:", {
-    start_date: startDate,
-    end_date: endDate,
-    user_id: userId
-  });
 
   const { data, error } = await supabase
     .from('habit_logs')
     .select(`
       *,
-      healthy_habits (
-        name,
-        type,
-        unit
-      )
+      healthy_habits (name, type, unit)
     `)
     .eq('user_id', userId)
     .gte('log_date', startDate)
     .lte('log_date', endDate)
-    .order('log_date', { ascending: true })
+    .order('log_date', { ascending: true });
 
   if (error) {
-    console.error("Error obteniendo hábitos mensuales:", error)
-    throw new Error(`Error al conectar con Supabase: ${error.message}`)
+    console.error("Error obteniendo hábitos mensuales:", error);
+    throw new Error(`Error al conectar con Supabase: ${error.message}`);
   }
+  return data || [];
+};
 
-  if (!data || data.length === 0) {
-    console.warn("No se encontraron hábitos para el mes")
-    return []
-  }
-
-  console.log("Datos mensuales obtenidos:", data.length, "registros")
-  return data
-}
-
-// Obtener información de un usuario específico
+/**
+ * Consulta el perfil completo e información general de un usuario.
+ */
 export const getUserInfo = async (userId = 19) => {
   try {
-    console.log(` Buscando información del usuario: ${userId}`);
-
     const { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('user_id', userId)
       .single();
 
-    if (error) {
-      console.error(" Error obteniendo información del usuario:", error);
-      throw new Error(`Error al conectar con Supabase: ${error.message}`);
-    }
-
-    if (!data) {
-      console.warn("No se encontró información del usuario");
-      return null;
-    }
-
-    console.log(" Información del usuario obtenida:", data.user_id);
+    if (error) throw error;
     return data;
   } catch (error) {
     console.error('Error en getUserInfo:', error);
@@ -287,46 +259,36 @@ export const getUserInfo = async (userId = 19) => {
   }
 };
 
-// Consultar estado de la mascota
+
+// ==========================================
+// 3. CONTROL DE ESTADO DE LA MASCOTA
+// ==========================================
+
+/**
+ * Obtiene el estado emocional (mood) y físico (energy_level) actual de la mascota.
+ */
 export const getPetStatus = async (userId) => {
   const { data, error } = await supabase
     .from('pet_states')
-    .select(`
-      *
-    `)
+    .select('*')
     .eq('user_id', userId)
-    .single()
+    .single();
 
   if (error) {
-    console.error("Error obteniendo estado de la mascota:", error)
-    throw new Error(`Error al conectar con Supabase: ${error.message}`)
+    console.error("Error obteniendo estado de la mascota:", error);
+    throw new Error(`Error al conectar con Supabase: ${error.message}`);
   }
+  return data;
+};
 
-  if (!data) {
-    console.warn("No se encontró estado de la mascota")
-    return null
-  }
-
-  console.log("Estado de la mascota obtenido:", data)
-  return data
-}
-
-// Actualizar estado de la mascota (mood)
 export const updatePetMood = async (mood, userId = 19) => {
   try {
-    console.log(`Actualizando mood de la mascota para usuario ${userId} a: ${mood}`);
-
     const { error } = await supabase
       .from('pet_states')
       .update({ mood: mood })
       .eq('user_id', userId);
 
-    if (error) {
-      console.error("Error actualizando mood de la mascota:", error);
-      throw new Error(`Error al conectar con Supabase: ${error.message}`);
-    }
-
-    console.log("Mood de la mascota actualizado exitosamente");
+    if (error) throw error;
     return { success: true };
   } catch (error) {
     console.error('Error en updatePetMood:', error);
@@ -334,22 +296,14 @@ export const updatePetMood = async (mood, userId = 19) => {
   }
 };
 
-// Actualizar nivel de energía de la mascota
 export const updatePetEnergy = async (energyLevel, userId = 19) => {
   try {
-    console.log(`Actualizando energy_level de la mascota para usuario ${userId} a: ${energyLevel}`);
-
     const { error } = await supabase
       .from('pet_states')
       .update({ energy_level: energyLevel })
       .eq('user_id', userId);
 
-    if (error) {
-      console.error("Error actualizando energy_level de la mascota:", error);
-      throw new Error(`Error al conectar con Supabase: ${error.message}`);
-    }
-
-    console.log("Energy_level de la mascota actualizado exitosamente");
+    if (error) throw error;
     return { success: true };
   } catch (error) {
     console.error('Error en updatePetEnergy:', error);
@@ -357,15 +311,14 @@ export const updatePetEnergy = async (energyLevel, userId = 19) => {
   }
 };
 
-// Obtener el último registro de agua del día
+/**
+ * Función de utilidad interna para buscar el último log de hidratación del día.
+ */
 const getLastWaterLog = async (userId) => {
   try {
     const dayHabits = await getDayHabits(userId);
     const waterLogs = dayHabits.filter(log => log.healthy_habits?.type === 'hydration');
-
     if (waterLogs.length === 0) return null;
-
-    // Ordenar por log_hour descendente para obtener el más reciente
     return waterLogs.sort((a, b) => b.log_hour.localeCompare(a.log_hour))[0];
   } catch (error) {
     console.error('Error obteniendo último registro de agua:', error);
@@ -373,266 +326,305 @@ const getLastWaterLog = async (userId) => {
   }
 };
 
-// Calcular tiempo transcurrido desde la última toma de agua (en horas)
+/**
+ * Calcula cuántas horas han pasado desde la última vez que el usuario registró agua.
+ */
 const getTimeSinceLastWater = (lastLog) => {
-  if (!lastLog) return Infinity; // Sin tomas de agua
-
+  if (!lastLog) return Infinity;
   try {
     const currentDate = getLocalDate();
     const currentTime = getLocalTime();
     const now = new Date(`${currentDate}T${currentTime}`);
     const logTime = new Date(`${lastLog.log_date}T${lastLog.log_hour}`);
-    const diffMs = now - logTime;
-    return diffMs / (1000 * 60 * 60); // Convertir a horas
+    return (now - logTime) / (1000 * 60 * 60);
   } catch (error) {
     console.error('Error calculando tiempo desde última toma:', error);
     return Infinity;
   }
 };
 
-// Verificar si thirsty debe activarse (estado dinámico, no se guarda en DB)
+/**
+ * Evalúa si se debe activar el estado de sed ('thirsty') de la mascota
+ * en el Frontend.
+ *
+ * Regla:
+ * Pasaron >= 2.4 horas sin agua Y el progreso diario es menor al 80%.
+ */
 export const checkThirstyState = async (userId) => {
   try {
     const lastWaterLog = await getLastWaterLog(userId);
     const timeSinceLastWater = getTimeSinceLastWater(lastWaterLog);
-    const waterInterval = 2.4; // 2.4 horas entre tomas (24h / 10 vasos)
 
-    // Obtener hábitos del día para calcular rates
+    const waterInterval = 2.4;
+
     const dayHabits = await getDayHabits(userId);
-    const totals = { hydration: 0, sleep: 0, active_break: 0 };
-    const goals = { hydration: 2500, sleep: 8, active_break: 3 };
 
-    dayHabits.forEach(log => {
+    const totals = {
+      hydration: 0,
+      sleep: 0,
+    };
+
+    const goals = {
+      hydration: 2500,
+      sleep: 8,
+    };
+
+    dayHabits.forEach((log) => {
       const type = log.healthy_habits?.type;
       const goal = log.healthy_habits?.daily_goal;
-      const value = log.value ?? 0;
 
       if (type && totals.hasOwnProperty(type)) {
-        totals[type] += value;
-        if (goal) goals[type] = goal;
+        totals[type] += log.value ?? 0;
+
+        if (goal) {
+          goals[type] = goal;
+        }
       }
     });
 
     const rates = {
       hydration: totals.hydration / goals.hydration,
       sleep: totals.sleep / goals.sleep,
-      active_break: totals.active_break / goals.active_break,
     };
 
-    // Thirsty se activa SOLO si: tiempo >= 2.4h Y (agua < 80% O (agua < 30% Y sueño >= 60%))
-    // El intervalo de tiempo es obligatorio, sin importar el porcentaje de hidratación
-    const isThirsty = timeSinceLastWater >= waterInterval && 
-      (rates.hydration < 0.8 || (rates.hydration < 0.3 && rates.sleep >= 0.6));
+    const isThirsty =
+      timeSinceLastWater >= waterInterval &&
+      (rates.hydration < 0.8 ||
+        (rates.hydration < 0.3 && rates.sleep >= 0.6));
 
-    console.log("Thirsty check:", {
-      timeSinceLastWater: `${timeSinceLastWater.toFixed(2)} horas`,
+    return {
       isThirsty,
-      rates: {
-        hydration: `${Math.round(rates.hydration * 100)}%`,
-        sleep: `${Math.round(rates.sleep * 100)}%`,
-      }
-    });
-
-    return { isThirsty, timeSinceLastWater };
+      timeSinceLastWater,
+    };
   } catch (error) {
-    console.error('Error verificando thirsty state:', error);
-    return { isThirsty: false, timeSinceLastWater: Infinity };
+    console.error("Error verificando thirsty state:", error);
+
+    return {
+      isThirsty: false,
+      timeSinceLastWater: Infinity,
+    };
   }
 };
 
-// Calcular y actualizar estado de la mascota basado en hábitos del día
+/**
+ * ALGORITMO CORE:
+ * Calcula el estado de ánimo y energía según el cumplimiento del día.
+ *
+ * Cambios aplicados:
+ * - Se unificó la lógica duplicada para evitar colisiones en la BD.
+ * - Puntuación de Energía: incrementa o reduce la energía
+ *   en base a rangos de cumplimiento.
+ * - Determinación del Mood: evalúa prioridades críticas.
+ *   Ej: sueño insuficiente provoca estado 'sleepy'.
+ */
 export const calculateAndUpdatePetState = async (userId) => {
   try {
-    console.log("Calculando estado de la mascota...");
-
-    // Obtener hábitos del día con sus goals
     const dayHabits = await getDayHabits(userId);
-
-    // Obtener energy_level actual como respaldo
     const currentPetState = await getPetStatus(userId);
+
     const currentEnergy = currentPetState?.energy_level ?? 50;
 
-    // ── PASO 1: Agrupar valores por tipo de hábito ──
-    const totals = { hydration: 0, sleep: 0, active_break: 0 };
-    const goals = { hydration: 2500, sleep: 8, active_break: 3 }; // fallback si no viene de DB
+    const totals = {
+      hydration: 0,
+      sleep: 0,
+      active_break: 0,
+    };
 
-    dayHabits.forEach(log => {
+    const goals = {
+      hydration: 2500,
+      sleep: 8,
+      active_break: 3,
+    };
+
+    dayHabits.forEach((log) => {
       const type = log.healthy_habits?.type;
       const goal = log.healthy_habits?.daily_goal;
-      const value = log.value ?? 0;
 
       if (type && totals.hasOwnProperty(type)) {
-        totals[type] += value;
-        // Usar el goal de la DB si está disponible
-        if (goal) goals[type] = goal;
+        totals[type] += log.value ?? 0;
+
+        if (goal) {
+          goals[type] = goal;
+        }
       }
     });
 
-    console.log("Totales del día:", totals);
-    console.log("Goals:", goals);
-
-    // ── PASO 2: Calcular tiempo desde última toma de agua ──
-    const lastWaterLog = await getLastWaterLog(userId);
-    const timeSinceLastWater = getTimeSinceLastWater(lastWaterLog);
-    const waterInterval = 2.4; // 2.4 horas entre tomas (24h / 10 vasos)
-    const minInterval = 1; // Mínimo 1 hora entre tomas
-
-    console.log("Última toma de agua:", lastWaterLog ? `${lastWaterLog.log_hour}` : "Sin tomas");
-    console.log("Tiempo desde última toma:", `${timeSinceLastWater.toFixed(2)} horas`);
-
-    // ── PASO 3: Calcular porcentaje de cumplimiento por hábito ──
     const rates = {
       hydration: totals.hydration / goals.hydration,
       sleep: totals.sleep / goals.sleep,
       active_break: totals.active_break / goals.active_break,
     };
 
-    console.log("Tasas de cumplimiento:", {
-      hydration: `${Math.round(rates.hydration * 100)}%`,
-      sleep: `${Math.round(rates.sleep * 100)}%`,
-      active_break: `${Math.round(rates.active_break * 100)}%`,
-    });
-
-    // ── PASO 3: Calcular energy_level nuevo (Opción 4 como respaldo) ──
+    // Variación del nivel de energía en base al desempeño diario
     let energyChange = 0;
-    Object.values(rates).forEach(rate => {
-      if (rate >= 1) energyChange += 15;
-      else if (rate >= 0.7) energyChange += 10;
-      else if (rate >= 0.5) energyChange += 5;
-      else if (rate >= 0.3) energyChange -= 5;
-      else energyChange -= 10;
+
+    Object.values(rates).forEach((rate) => {
+      if (rate >= 1) {
+        energyChange += 15;
+      } else if (rate >= 0.7) {
+        energyChange += 10;
+      } else if (rate >= 0.5) {
+        energyChange += 5;
+      } else if (rate >= 0.3) {
+        energyChange -= 5;
+      } else {
+        energyChange -= 10;
+      }
     });
 
-    const newEnergy = Math.max(0, Math.min(100, currentEnergy + energyChange));
+    const newEnergy = Math.max(
+      0,
+      Math.min(100, currentEnergy + energyChange)
+    );
 
-    // ── PASO 4: Determinar mood base (sad/neutral/happy) basado en habit_logs ──
     let newMood;
 
-    // Prioridad 1 — Sueño crítico (< 5h registradas, pero algo hay)
+    // Clasificación de estados de ánimo por prioridades lógicas
+
     if (totals.sleep > 0 && totals.sleep < 5) {
-      newMood = 'sleepy';
-    }
-    // Prioridad 2 — Promedio global >= 80% → happy
-    else if (
+      // Prioridad 1: Privación del sueño
+      newMood = "sleepy";
+    } else if (
       rates.hydration >= 0.8 &&
       rates.sleep >= 0.8 &&
       rates.active_break >= 0.8
     ) {
-      newMood = 'happy';
-    }
-    // Prioridad 3 — Al menos 2 hábitos >= 50% → neutral
-    else if (
-      [rates.hydration, rates.sleep, rates.active_break]
-        .filter(r => r >= 0.5).length >= 2
+      // Prioridad 2: Excelente rendimiento global
+      newMood = "happy";
+    } else if (
+      Object.values(rates).filter((r) => r >= 0.5).length >= 2
     ) {
-      newMood = 'neutral';
-    }
-    // Prioridad 4 — Menos de 1 hábito cumple el 50% → sad
-    else if (
-      [rates.hydration, rates.sleep, rates.active_break]
-        .filter(r => r >= 0.5).length < 1
+      // Prioridad 3: Progreso aceptable en la mayoría
+      newMood = "neutral";
+    } else if (
+      Object.values(rates).filter((r) => r >= 0.5).length < 1
     ) {
-      newMood = 'sad';
-    }
-    // Respaldo — energy_level como desempate
-    else {
-      if (newEnergy >= 70) newMood = 'happy';
-      else if (newEnergy >= 40) newMood = 'neutral';
-      else newMood = 'sad';
+      // Prioridad 4: Incumplimiento generalizado
+      newMood = "sad";
+    } else {
+      if (newEnergy >= 70) {
+        newMood = "happy";
+      } else if (newEnergy >= 40) {
+        newMood = "neutral";
+      } else {
+        newMood = "sad";
+      }
     }
 
-    console.log(`Mood calculado: ${newMood} | Energy: ${newEnergy}`);
-
-    // ── PASO 5: Guardar en Supabase ──
+    // Actualización simultánea en Supabase
     await updatePetMood(newMood, userId);
     await updatePetEnergy(newEnergy, userId);
 
-    return { mood: newMood, energy_level: newEnergy };
+    return {
+      mood: newMood,
+      energy_level: newEnergy,
+    };
   } catch (error) {
-    console.error('Error en calculateAndUpdatePetState:', error);
+    console.error("Error en calculateAndUpdatePetState:", error);
     throw error;
   }
 };
 
-// Actualizar puntos totales del usuario
+// ==========================================
+// 4. SISTEMA DE PUNTOS Y PENALIZACIONES
+// ==========================================
+
 export const updateUserPoints = async (points, userId = 19) => {
   try {
-    console.log(`Actualizando total_points del usuario ${userId} a: ${points}`);
-
     const { error } = await supabase
-      .from('users')
-      .update({ total_points: points })
-      .eq('user_id', userId);
+      .from("users")
+      .update({
+        total_points: points,
+      })
+      .eq("user_id", userId);
 
-    if (error) {
-      console.error("Error actualizando puntos del usuario:", error);
-      throw new Error(`Error al conectar con Supabase: ${error.message}`);
-    }
+    if (error) throw error;
 
-    console.log("Puntos del usuario actualizados exitosamente");
-    return { success: true };
+    return {
+      success: true,
+    };
   } catch (error) {
-    console.error('Error en updateUserPoints:', error);
+    console.error("Error en updateUserPoints:", error);
     throw error;
   }
 };
 
-// ── LÓGICA DE ESTADOS DE LA MASCOTA ──
-
-// Obtener acumulado de hidratación del día
 export const getTodayWaterTotal = async (userId = 19) => {
-    const today = getLocalDate();
-    const { data, error } = await supabase
-        .from('habit_logs')
-        .select('value')
-        .eq('user_id', userId)
-        .eq('habit_id', 1) // hidratación
-        .eq('log_date', today);
+  const today = getLocalDate();
 
-    if (error) return 0;
-    return (data || []).reduce((sum, log) => sum + (log.value || 0), 0);
+  const { data, error } = await supabase
+    .from("habit_logs")
+    .select("value")
+    .eq("user_id", userId)
+    .eq("habit_id", 1)
+    .eq("log_date", today);
+
+  if (error) return 0;
+
+  return (data || []).reduce(
+    (sum, log) => sum + (log.value || 0),
+    0
+  );
 };
 
-// Obtener horas de sueño del día
 export const getTodaySleepHours = async (userId = 19) => {
-    const today = getLocalDate();
-    const { data, error } = await supabase
-        .from('habit_logs')
-        .select('value')
-        .eq('user_id', userId)
-        .eq('habit_id', 2) // sueño
-        .eq('log_date', today);
+  const today = getLocalDate();
 
-    if (error) return null; // null = sin registro
-    if (!data || data.length === 0) return null;
-    return data.reduce((sum, log) => sum + (log.value || 0), 0);
+  const { data, error } = await supabase
+    .from("habit_logs")
+    .select("value")
+    .eq("user_id", userId)
+    .eq("habit_id", 2)
+    .eq("log_date", today);
+
+  if (error) return null;
+
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  return data.reduce(
+    (sum, log) => sum + (log.value || 0),
+    0
+  );
 };
 
-// Restar puntos por penalización sleepy
+/**
+ * Aplica una penalización de -15 puntos al usuario
+ * si se encuentra en estado 'sleepy'.
+ */
 export const deductSleepyPoints = async (userId = 19) => {
-    try {
-        const { data: user, error: fetchError } = await supabase
-            .from('users')
-            .select('total_points')
-            .eq('user_id', userId)
-            .single();
+  try {
+    const {
+      data: user,
+      error: fetchError,
+    } = await supabase
+      .from("users")
+      .select("total_points")
+      .eq("user_id", userId)
+      .single();
 
-        if (fetchError) throw fetchError;
+    if (fetchError) throw fetchError;
 
-        const newPoints = Math.max(0, (user.total_points || 0) - 15);
+    const newPoints = Math.max(
+      0,
+      (user.total_points || 0) - 15
+    );
 
-        const { error: updateError } = await supabase
-            .from('users')
-            .update({ total_points: newPoints })
-            .eq('user_id', userId);
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({
+        total_points: newPoints,
+      })
+      .eq("user_id", userId);
 
-        if (updateError) throw updateError;
+    if (updateError) throw updateError;
 
-        return newPoints;
-    } catch (err) {
-        console.error('Error restando puntos sleepy:', err);
-        throw err;
-    }
+    return newPoints;
+  } catch (err) {
+    console.error("Error restando puntos sleepy:", err);
+    throw err;
+  }
 };
 
 // Calcular energy_level y actualizar pet_states según los 3 hábitos

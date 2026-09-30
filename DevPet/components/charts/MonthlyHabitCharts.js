@@ -6,6 +6,13 @@ import { getMonthHabits } from '../../src/services/habits.service';
 
 const { width } = Dimensions.get('window');
 
+/**
+ * Componente para renderizar la gráfica de tendencias de hábitos de los últimos 30 días.
+ *
+ * @param {Object} props
+ * @param {string} props.selectedHabit - Tipo de hábito activo ('hydration', 'sleep', 'active_break').
+ * @param {number|string} props.userId - ID del usuario en sesión.
+ */
 export default function MonthlyHabitCharts({ selectedHabit, userId }) {
     const [monthlyData, setMonthlyData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -29,13 +36,16 @@ export default function MonthlyHabitCharts({ selectedHabit, userId }) {
         }
     };
 
+    /**
+     * Filtra y agrupa las métricas diarias para los últimos 30 días continuos.
+     */
     const processMonthlyData = (data, habitType) => {
         // Filtrar datos por tipo de hábito
         const filteredData = data.filter(log => 
             log.healthy_habits?.type === habitType
         );
 
-        // Agrupar por día y sumar valores
+        // Agrupar por día y sumar valores acumulados
         const dailyData = {};
         filteredData.forEach(log => {
             const date = log.log_date;
@@ -45,7 +55,7 @@ export default function MonthlyHabitCharts({ selectedHabit, userId }) {
             dailyData[date] += log.value || 0;
         });
 
-        // Crear array para los últimos 30 días
+        // Generar un arreglo continuo de 30 días
         const result = [];
         const today = new Date();
         
@@ -57,7 +67,7 @@ export default function MonthlyHabitCharts({ selectedHabit, userId }) {
             result.push({
                 date: dateStr,
                 value: dailyData[dateStr] || 0,
-                label: date.getDate().toString() // Día del mes (1, 2, 3, etc.)
+                label: date.getDate().toString() // Día del mes
             });
         }
 
@@ -80,20 +90,24 @@ export default function MonthlyHabitCharts({ selectedHabit, userId }) {
         );
     }
 
-    // Preparar datos para el gráfico
+    // Preparar puntos de datos para la gráfica
     const chartData = monthlyData.map(day => ({
         value: day.value,
         dataPointColor: getChartColor(selectedHabit)
     }));
 
-    // Mostrar etiquetas cada 5 días para no saturar el eje X
+    // Mostrar etiquetas cada 5 días para evitar la saturación visual
     const labels = monthlyData.map((day, index) => 
         index % 5 === 0 ? day.label : ''
     );
 
-    // Calcular el máximo para el eje Y dinámico
     const maxValue = Math.max(...monthlyData.map(day => day.value));
     const dynamicMaxY = getDynamicMaxY(selectedHabit, maxValue);
+
+    const chartWidth = width - 80;
+    const calculatedSpacing = chartData.length > 0 
+        ? Math.max(10, Math.floor(chartWidth / chartData.length)) 
+        : 20;
 
     return (
         <View style={styles.chartContainer}>
@@ -103,9 +117,9 @@ export default function MonthlyHabitCharts({ selectedHabit, userId }) {
             
             <LineChart
                 data={chartData}
-                width={width - 80}
+                width={chartWidth}
                 height={200}
-                spacing={Math.floor((width - 80) / chartData.length)}
+                spacing={calculatedSpacing}
                 
                 color1={getChartColor(selectedHabit)}
                 thickness={2}
@@ -146,7 +160,6 @@ function getChartTitle(habitType) {
             return 'Gráfico Mensual';
     }
 }
-
 function getChartColor(habitType) {
     switch (habitType) {
         case 'sleep':
@@ -159,7 +172,6 @@ function getChartColor(habitType) {
             return '#4B9FE1';
     }
 }
-
 function getUnitSuffix(habitType) {
     switch (habitType) {
         case 'sleep':
@@ -173,27 +185,17 @@ function getUnitSuffix(habitType) {
     }
 }
 
-function getDecimalPlaces(habitType) {
-    switch (habitType) {
-        case 'sleep':
-            return 1; // 1 decimal para horas
-        case 'hydration':
-            return 0; // Sin decimales para ml
-        case 'active_break':
-            return 0; // Sin decimales para contador
-        default:
-            return 0;
-    }
-}
-
+/**
+ * Establece el tope superior de la gráfica en función de la meta base o el valor más alto registrado.
+ */
 function getDynamicMaxY(habitType, maxValue) {
     switch (habitType) {
         case 'sleep':
-            return Math.max(maxValue, 12); // Mínimo 12 horas para sueño
+            return Math.max(maxValue, 12);
         case 'hydration':
-            return Math.max(maxValue, 2500); // Mínimo 2500ml para hidratación
+            return Math.max(maxValue, 2500);
         case 'active_break':
-            return Math.max(maxValue, 7); // Mínimo 7 pausas
+            return Math.max(maxValue, 7);
         default:
             return maxValue;
     }

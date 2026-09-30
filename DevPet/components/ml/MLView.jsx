@@ -1,89 +1,44 @@
 import React from "react";
-import { View } from "react-native";
-import { WebView } from "react-native-webview";
+import { View, Alert } from "react-native";
+import MLCamera from "./MLCamera";
 
-const MLView = ({ onDetected }) => {
-  const html = `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@latest"></script>
-  </head>
-  <body>
-    <video id="webcam" autoplay playsinline width="300" height="300"></video>
-
-    <script>
-      const URL = "https://teachablemachine.withgoogle.com/models/UTWlA7v3H/";
-
-      let model, webcam;
-
-      async function init() {
-        model = await tmPose.load(URL + "model.json", URL + "metadata.json");
-
-        webcam = new tmPose.Webcam(300, 300, true);
-        await webcam.setup();
-        await webcam.play();
-
-        document.getElementById("webcam").srcObject = webcam.webcam;
-
-        window.requestAnimationFrame(loop);
-      }
-
-      async function loop() {
-        webcam.update();
-        await predict();
-        window.requestAnimationFrame(loop);
-      }
-
-      async function predict() {
-        const { posenetOutput } = await model.estimatePose(webcam.canvas);
-        const prediction = await model.predict(posenetOutput);
-
-        let best = prediction.reduce((a, b) => a.probability > b.probability ? a : b);
-
-        if (best.probability > 0.8) {
-          window.ReactNativeWebView.postMessage(best.className);
-        }
-      }
-
-      init();
-    </script>
-  </body>
-  </html>
-  `;
-
-  const handleMLResult = () => {
+/**
+ * Componente MLView
+ * Actúa como orquestador y contenedor de la funcionalidad de visión por computadora nativa,
+ * administrando las bonificaciones y mutaciones tras una validación correcta.
+ */
+const MLView = ({ onDetected, saveBreak, addPoints }) => {
+  
+  /**
+   * Manejador del resultado exitoso del pipeline de visión por computadora
+   */
+  const handlePosturaCorrecta = () => {
     Alert.alert(
       "Análisis de postura",
-      "✔ Estiramiento correcto detectado por IA",
-    );  
-    saveBreak({
-      user_id: "demo-user",
-      completed_at: new Date().toISOString(),
-    });
+      "✔ ¡Estiramiento correcto detectado por la IA nativa!",
+    ); 
 
-    addPoints((prev) => prev + 5);
+    // Disparador del callback del módulo padre (para actualizar estados visuales de la interfaz)
+    if (onDetected) onDetected(true);
+
+    // Persistencia del registro de salud en el backend de Supabase
+    if (saveBreak) {
+      saveBreak({
+        user_id: "demo-user", // TODO: Vincular dinámicamente con el UID de AuthContext
+        completed_at: new Date().toISOString(),
+      });
+    }
+
+    // Gamificación: Incremento de la puntuación para la evolución de la mascota virtual
+    if (addPoints) {
+      addPoints((prev) => prev + 5);
+    }
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <WebView
-        style={{ flex: 1 }}
-        originWhitelist={["*"]}
-        source={{ html }}
-        javaScriptEnabled
-        domStorageEnabled
-        onMessage={(event) => {
-          const result = event.nativeEvent.data;
-
-          console.log("ML:", result);
-
-          if (result === "Correcto") {
-            onDetected(true);
-          }
-        }}
-      />
+    <View style={{ flex: 1, backgroundColor: "#000" }}>
+      {/* Inyección directa del módulo nativo optimizado con TensorFlow.js */}
+      <MLCamera onDetected={handlePosturaCorrecta} />
     </View>
   );
 };

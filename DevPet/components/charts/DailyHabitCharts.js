@@ -6,6 +6,14 @@ import { getHealthyHabits } from '../../src/services/habits.service';
 
 const { width } = Dimensions.get('window');
 
+/**
+ * Componente principal para la visualización de gráficos y métricas diarias.
+ * Renderiza el gráfico o tarjeta correspondiente según el hábito seleccionado.
+ *
+ * @param {Object} props
+ * @param {string} props.selectedHabit - Identificador del hábito ('hydration', 'sleep', 'active_break').
+ * @param {Array<Object>} props.habitLogs - Lista de registros del usuario para el día actual.
+ */
 export default function DailyHabitCharts({ selectedHabit, habitLogs }) {
     const [healthyHabits, setHealthyHabits] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -38,7 +46,7 @@ export default function DailyHabitCharts({ selectedHabit, habitLogs }) {
         return null;
     }
 
-    // Find the selected habit data
+    // Buscar la configuración del hábito seleccionado
     const habitData = healthyHabits.find(habit => habit.type === selectedHabit);
     if (!habitData) {
         return (
@@ -48,7 +56,7 @@ export default function DailyHabitCharts({ selectedHabit, habitLogs }) {
         );
     }
 
-    // Filter logs for the selected habit
+    // Filtrar los registros para el hábito activo
     const selectedHabitLogs = habitLogs ? habitLogs.filter(log => 
         log.healthy_habits?.type === selectedHabit
     ) : [];
@@ -65,8 +73,14 @@ export default function DailyHabitCharts({ selectedHabit, habitLogs }) {
     }
 }
 
+/**
+ * Gráfico acumulativo de consumo de agua durante el día.
+ *
+ * @param {Object} props
+ * @param {Array<Object>} props.habitLogs - Lista de registros de hidratación.
+ * @param {number} props.dailyGoal - Meta diaria de hidratación en ml.
+ */
 function HydrationChart({ habitLogs, dailyGoal }) {
-    // Si no hay datos de hidratación hoy, mostrar mensaje motivacional
     if (!habitLogs || habitLogs.length === 0) {
         return (
             <View style={styles.noDataContainer}>
@@ -82,21 +96,17 @@ function HydrationChart({ habitLogs, dailyGoal }) {
         );
     }
 
-    // Sort logs by log_hour to show hours from smallest to largest
+    // Ordenar registros por hora
     const sortedLogs = [...habitLogs].sort((a, b) => {
-        return a.log_hour.localeCompare(b.log_hour);
+        return (a.log_hour || '').localeCompare(b.log_hour || '');
     });
 
-    // Calculate cumulative sum and create chart data points
     const chartData = [];
     const labels = [];
     let cumulativeSum = 0;
 
     sortedLogs.forEach(log => {
         cumulativeSum += log.value || 0;
-        
-        // Usar directamente log_hour de la consulta de Supabase
-        // log_hour ya viene en formato HH:MM desde getLocalTime()
         const timeLabel = log.log_hour || '00:00';
         
         chartData.push({
@@ -106,8 +116,11 @@ function HydrationChart({ habitLogs, dailyGoal }) {
         labels.push(timeLabel);
     });
 
-    // Calculate dynamic max value for y-axis
     const maxValue = chartData.length > 0 ? Math.max(...chartData.map(d => d.value)) : dailyGoal;
+    const chartWidth = width - 80;
+    const calculatedSpacing = chartData.length > 0 
+        ? Math.max(15, Math.floor(chartWidth / chartData.length)) 
+        : 30;
 
     return (
         <View style={styles.chartContainer}>
@@ -116,9 +129,9 @@ function HydrationChart({ habitLogs, dailyGoal }) {
             
             <LineChart
                 data={chartData}
-                width={width - 80}
+                width={chartWidth}
                 height={200}
-                spacing={Math.floor((width - 80) / chartData.length)}
+                spacing={calculatedSpacing}
                 
                 color1="#4B9FE1"
                 thickness={2}
@@ -147,17 +160,22 @@ function HydrationChart({ habitLogs, dailyGoal }) {
     );
 }
 
+/**
+ * Tarjeta de resumen de horas de descanso diario.
+ *
+ * @param {Object} props
+ * @param {Array<Object>} props.habitLogs - Registros de horas dormidas.
+ */
 function SleepCard({ habitLogs }) {
-    // Si no hay datos de sueño hoy, mostrar mensaje motivacional
     if (!habitLogs || habitLogs.length === 0) {
         return (
             <View style={styles.noDataContainerSleep}>
-                <Text style={[styles.noDataTitle, {color: '#8B5CF6'}]}>¡Hora de descansar! 😴</Text>
+                <Text style={[styles.noDataTitle, { color: '#8B5CF6' }]}>¡Hora de descansar! 😴</Text>
                 <Text style={styles.noDataSubtitle}>
                     No has registrado tu sueño hoy. 
                     {"\n"}Recuerda dormir entre 7-9 horas para un buen descanso.
                 </Text>
-                <Text style={[styles.noDataTip, {backgroundColor: 'rgba(139, 92, 246, 0.2)'}]}>
+                <Text style={[styles.noDataTip, { backgroundColor: 'rgba(139, 92, 246, 0.2)' }]}>
                     💡 Establece una rutina nocturna y mejora tu calidad de sueño
                 </Text>
             </View>
@@ -178,17 +196,23 @@ function SleepCard({ habitLogs }) {
     );
 }
 
+/**
+ * Tarjeta de resumen de pausas activas completadas en el día.
+ *
+ * @param {Object} props
+ * @param {Array<Object>} props.habitLogs - Registros de pausas ejecutadas.
+ * @param {number} props.dailyGoal - Meta diaria de pausas.
+ */
 function ActiveBreaksCard({ habitLogs, dailyGoal }) {
-    // Si no hay datos de pausas activas hoy, mostrar mensaje motivacional
     if (!habitLogs || habitLogs.length === 0) {
         return (
             <View style={styles.noDataContainerBreaks}>
-                <Text style={[styles.noDataTitle, {color: '#10B981'}]}>¡Muévete y descansa! 🤸</Text>
+                <Text style={[styles.noDataTitle, { color: '#10B981' }]}>¡Muévete y descansa! 🤸</Text>
                 <Text style={styles.noDataSubtitle}>
                     No has hecho pausas activas hoy. 
                     {"\n"}Tu meta es de {dailyGoal} pausas para mantenerte energético.
                 </Text>
-                <Text style={[styles.noDataTip, {backgroundColor: 'rgba(16, 185, 129, 0.2)'}]}>
+                <Text style={[styles.noDataTip, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
                     💡 Levántate, estira y muévete cada hora para mejorar tu salud
                 </Text>
             </View>
